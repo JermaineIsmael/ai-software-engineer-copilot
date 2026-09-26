@@ -4,4 +4,5 @@ public sealed record ProcessedRepositorySnapshot(
     string Repository,
     string Branch,
     IReadOnlyList<SourceFileMetadata> Files,
-    IReadOnlyList<CodeChunk> Chunks);
+    IReadOnlyList<CodeChunk> Chunks,
+    IReadOnlyList<CodeChunkEmbedding> Embeddings);

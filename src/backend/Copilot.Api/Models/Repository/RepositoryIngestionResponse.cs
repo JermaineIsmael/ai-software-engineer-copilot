@@ -5,5 +5,7 @@ public sealed record RepositoryIngestionResponse(
     string Branch,
     int FileCount,
     int ChunkCount,
+    int EmbeddingCount,
     IReadOnlyList<SourceFileMetadata> Files,
-    IReadOnlyList<CodeChunk> Chunks);
+    IReadOnlyList<CodeChunk> Chunks,
+    IReadOnlyList<CodeChunkEmbedding> Embeddings);

@@ -1,139 +1,258 @@
 using Copilot.Api.Models.Repository;
 using Copilot.Api.Services.Repository;
-using Microsoft.Extensions.Logging;
-using Moq;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Copilot.Api.Tests;
 
 public class RepositoryIngestionServiceTests
 {
     [Fact]
-    public async Task IngestAsync_ReturnsProcessedRepositorySnapshotWithMetadataAndChunks()
+    public async Task IngestAsync_ReturnsProcessedSnapshotWithMetadataChunksAndEmbeddings()
     {
-        var content = "Console.WriteLine(\"Hello\");";
-        var expectedSnapshot = new RepositorySnapshot(
-            "owner/repository",
-            "main",
-            new List<RepositoryFile>
-            {
-                new("owner/repository", "main", "src/Program.cs", "cs", content)
-            });
-
-        var provider = new Mock<IRepositoryProvider>();
-        provider
-            .Setup(x => x.GetRepositoryAsync(
-                "https://github.com/owner/repository",
+        var repositoryProvider = new FakeRepositoryProvider(
+            new RepositorySnapshot(
+                "owner/repository",
                 "main",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSnapshot);
+                new[]
+                {
+                    new RepositoryFile(
+                        "owner/repository",
+                        "main",
+                        "src/Test.cs",
+                        "csharp",
+                        "using System;\nConsole.WriteLine(\"Hello\");")
+                }));
 
-        var metadataService = new SourceFileMetadataService(new SourceFileClassifier());
+        var metadataService = new SourceFileMetadataService(
+            new SourceFileClassifier());
+
         var chunkingService = new CodeChunkingService();
-        var logger = Mock.Of<ILogger<RepositoryIngestionService>>();
-        var service = new RepositoryIngestionService(provider.Object, metadataService, chunkingService, logger);
+        var embeddingService = new FakeEmbeddingService();
 
-        var result = await service.IngestAsync("https://github.com/owner/repository", "main");
+        var service = new RepositoryIngestionService(
+            repositoryProvider,
+            metadataService,
+            chunkingService,
+            embeddingService,
+            NullLogger<RepositoryIngestionService>.Instance);
 
-        Assert.Equal(expectedSnapshot.Repository, result.Repository);
-        Assert.Equal(expectedSnapshot.Branch, result.Branch);
+        var result = await service.IngestAsync(
+            "https://github.com/owner/repository",
+            "main");
+
+        Assert.Equal("owner/repository", result.Repository);
+        Assert.Equal("main", result.Branch);
+
         Assert.Single(result.Files);
         Assert.Single(result.Chunks);
+        Assert.Single(result.Embeddings);
 
-        var file = result.Files[0];
-        Assert.Equal("src/Program.cs", file.Path);
-        Assert.Equal("csharp", file.Language);
-        Assert.Equal(".cs", file.Extension);
-        Assert.Equal(1, file.LineCount);
-        Assert.Equal(content.Length, file.CharacterCount);
-        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(content), file.ByteCount);
-        Assert.Equal(content, file.Content);
+        Assert.Equal(
+            result.Chunks[0].Content,
+            result.Embeddings[0].Content);
 
-        var chunk = result.Chunks[0];
-        Assert.Equal("owner/repository", chunk.Repository);
-        Assert.Equal("main", chunk.Branch);
-        Assert.Equal("src/Program.cs", chunk.Path);
-        Assert.Equal("csharp", chunk.Language);
-        Assert.Equal(0, chunk.ChunkIndex);
-        Assert.Equal(1, chunk.StartLine);
-        Assert.Equal(1, chunk.EndLine);
-        Assert.Equal(content, chunk.Content);
+        Assert.Equal(
+            result.Chunks[0].Path,
+            result.Embeddings[0].Path);
 
-        provider.Verify(
-            x => x.GetRepositoryAsync(
-                "https://github.com/owner/repository",
-                "main",
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Equal(
+            result.Chunks[0].StartLine,
+            result.Embeddings[0].StartLine);
+
+        Assert.Equal(
+            result.Chunks[0].EndLine,
+            result.Embeddings[0].EndLine);
+
+        Assert.Equal(
+            new float[] { 0.1f, 0.2f, 0.3f },
+            result.Embeddings[0].Embedding);
     }
 
     [Fact]
-    public async Task IngestAsync_ProcessesMultipleFiles()
+    public async Task IngestAsync_PassesChunksToEmbeddingService()
     {
-        var expectedSnapshot = new RepositorySnapshot(
-            "owner/repository",
-            "main",
-            new List<RepositoryFile>
-            {
-                new("owner/repository", "main", "src/Program.cs", "cs", "Console.WriteLine(\"Hello\");"),
-                new("owner/repository", "main", "appsettings.json", "json", "{ \"Environment\": \"Development\" }")
-            });
-
-        var provider = new Mock<IRepositoryProvider>();
-        provider
-            .Setup(x => x.GetRepositoryAsync(
-                "https://github.com/owner/repository",
+        var repositoryProvider = new FakeRepositoryProvider(
+            new RepositorySnapshot(
+                "owner/repository",
                 "main",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSnapshot);
+                new[]
+                {
+                    new RepositoryFile(
+                        "owner/repository",
+                        "main",
+                        "src/Test.cs",
+                        "csharp",
+                        "line 1\nline 2\nline 3")
+                }));
 
-        var metadataService = new SourceFileMetadataService(new SourceFileClassifier());
+        var metadataService = new SourceFileMetadataService(
+            new SourceFileClassifier());
+
         var chunkingService = new CodeChunkingService();
-        var logger = Mock.Of<ILogger<RepositoryIngestionService>>();
-        var service = new RepositoryIngestionService(provider.Object, metadataService, chunkingService, logger);
+        var embeddingService = new FakeEmbeddingService();
 
-        var result = await service.IngestAsync("https://github.com/owner/repository", "main");
+        var service = new RepositoryIngestionService(
+            repositoryProvider,
+            metadataService,
+            chunkingService,
+            embeddingService,
+            NullLogger<RepositoryIngestionService>.Instance);
 
-        Assert.Equal(2, result.Files.Count);
-        Assert.Equal(2, result.Chunks.Count);
-        Assert.Equal("csharp", result.Files[0].Language);
-        Assert.Equal("json", result.Files[1].Language);
-        Assert.Equal(".cs", result.Files[0].Extension);
-        Assert.Equal(".json", result.Files[1].Extension);
-        Assert.Equal("src/Program.cs", result.Chunks[0].Path);
-        Assert.Equal("appsettings.json", result.Chunks[1].Path);
+        await service.IngestAsync(
+            "https://github.com/owner/repository",
+            "main");
+
+        Assert.NotNull(embeddingService.ReceivedChunks);
+        Assert.Single(embeddingService.ReceivedChunks!);
+
+        Assert.Equal(
+            "src/Test.cs",
+            embeddingService.ReceivedChunks![0].Path);
+    }
+
+    [Fact]
+    public async Task IngestAsync_PassesCancellationTokenToEmbeddingService()
+    {
+        var repositoryProvider = new FakeRepositoryProvider(
+            new RepositorySnapshot(
+                "owner/repository",
+                "main",
+                new[]
+                {
+                    new RepositoryFile(
+                        "owner/repository",
+                        "main",
+                        "src/Test.cs",
+                        "csharp",
+                        "Console.WriteLine(\"Hello\");")
+                }));
+
+        var metadataService = new SourceFileMetadataService(
+            new SourceFileClassifier());
+
+        var chunkingService = new CodeChunkingService();
+        var embeddingService = new FakeEmbeddingService();
+
+        var service = new RepositoryIngestionService(
+            repositoryProvider,
+            metadataService,
+            chunkingService,
+            embeddingService,
+            NullLogger<RepositoryIngestionService>.Instance);
+
+        using var cancellationTokenSource =
+            new CancellationTokenSource();
+
+        await service.IngestAsync(
+            "https://github.com/owner/repository",
+            "main",
+            cancellationTokenSource.Token);
+
+        Assert.Equal(
+            cancellationTokenSource.Token,
+            embeddingService.ReceivedCancellationToken);
     }
 
     [Fact]
     public async Task IngestAsync_ThrowsWhenRepositoryUrlIsMissing()
     {
-        var provider = new Mock<IRepositoryProvider>();
-        var metadataService = new SourceFileMetadataService(new SourceFileClassifier());
-        var chunkingService = new CodeChunkingService();
-        var logger = Mock.Of<ILogger<RepositoryIngestionService>>();
-        var service = new RepositoryIngestionService(provider.Object, metadataService, chunkingService, logger);
+        var service = CreateService();
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.IngestAsync("", "main"));
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => service.IngestAsync(
+                string.Empty,
+                "main"));
 
-        Assert.Equal("repositoryUrl", exception.ParamName);
-        provider.Verify(
-            x => x.GetRepositoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.Equal(
+            "repositoryUrl",
+            exception.ParamName);
     }
 
     [Fact]
     public async Task IngestAsync_ThrowsWhenBranchIsMissing()
     {
-        var provider = new Mock<IRepositoryProvider>();
-        var metadataService = new SourceFileMetadataService(new SourceFileClassifier());
+        var service = CreateService();
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => service.IngestAsync(
+                "https://github.com/owner/repository",
+                string.Empty));
+
+        Assert.Equal(
+            "branch",
+            exception.ParamName);
+    }
+
+    private static RepositoryIngestionService CreateService()
+    {
+        var repositoryProvider = new FakeRepositoryProvider(
+            new RepositorySnapshot(
+                "owner/repository",
+                "main",
+                Array.Empty<RepositoryFile>()));
+
+        var metadataService = new SourceFileMetadataService(
+            new SourceFileClassifier());
+
         var chunkingService = new CodeChunkingService();
-        var logger = Mock.Of<ILogger<RepositoryIngestionService>>();
-        var service = new RepositoryIngestionService(provider.Object, metadataService, chunkingService, logger);
+        var embeddingService = new FakeEmbeddingService();
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.IngestAsync("https://github.com/owner/repository", ""));
+        return new RepositoryIngestionService(
+            repositoryProvider,
+            metadataService,
+            chunkingService,
+            embeddingService,
+            NullLogger<RepositoryIngestionService>.Instance);
+    }
 
-        Assert.Equal("branch", exception.ParamName);
-        provider.Verify(
-            x => x.GetRepositoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+    private sealed class FakeRepositoryProvider : IRepositoryProvider
+    {
+        private readonly RepositorySnapshot _snapshot;
+
+        public FakeRepositoryProvider(
+            RepositorySnapshot snapshot)
+        {
+            _snapshot = snapshot;
+        }
+
+        public Task<RepositorySnapshot> GetRepositoryAsync(
+            string repositoryUrl,
+            string branch,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_snapshot);
+        }
+    }
+
+    private sealed class FakeEmbeddingService : IEmbeddingService
+    {
+        public IReadOnlyList<CodeChunk>? ReceivedChunks { get; private set; }
+
+        public CancellationToken ReceivedCancellationToken { get; private set; }
+
+        public Task<IReadOnlyList<CodeChunkEmbedding>> GenerateEmbeddingsAsync(
+            IReadOnlyList<CodeChunk> chunks,
+            CancellationToken cancellationToken = default)
+        {
+            ReceivedChunks = chunks;
+            ReceivedCancellationToken = cancellationToken;
+
+            var embeddings = chunks
+                .Select(chunk =>
+                    new CodeChunkEmbedding(
+                        chunk.Repository,
+                        chunk.Branch,
+                        chunk.Path,
+                        chunk.Language,
+                        chunk.ChunkIndex,
+                        chunk.StartLine,
+                        chunk.EndLine,
+                        chunk.Content,
+                        new[] { 0.1f, 0.2f, 0.3f }))
+                .ToList();
+
+            return Task.FromResult<
+                IReadOnlyList<CodeChunkEmbedding>>(embeddings);
+        }
     }
 }

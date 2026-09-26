@@ -6,6 +6,7 @@ using Copilot.Api.Models.Repository;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
+builder.Services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
 
 builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(client =>
 {
@@ -175,8 +176,10 @@ app.MapPost("/api/repositories/ingest", async (
                 snapshot.Branch,
                 snapshot.Files.Count,
                 snapshot.Chunks.Count,
+                snapshot.Embeddings.Count,
                 snapshot.Files,
-                snapshot.Chunks));
+                snapshot.Chunks,
+                snapshot.Embeddings));
     }
     catch (ArgumentException ex)
     {
@@ -232,3 +235,4 @@ public class ErrorResponse
 {
     public string Error { get; set; } = string.Empty;
 }
+
