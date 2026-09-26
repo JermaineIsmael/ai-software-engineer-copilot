@@ -1,8 +1,22 @@
+using System.Net.Http.Headers;
 using Copilot.Api.Services;
+using Copilot.Api.Services.Repository;
+using Copilot.Api.Models.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
+
+builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.DefaultRequestHeaders.UserAgent.Add(
+        new ProductInfoHeaderValue("AI-Software-Engineer-Copilot", "0.1"));
+    client.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+});
+
+builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
 
 builder.Services.AddCors(options =>
 {
@@ -121,6 +135,76 @@ app.MapPost("/api/chat/stream", async (
             $"data: {encodedError}\n\n");
 
         await context.Response.Body.FlushAsync();
+    }
+});
+
+app.MapPost("/api/repositories/ingest", async (
+    RepositoryIngestionRequest request,
+    IRepositoryIngestionService ingestionService,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.RepositoryUrl))
+    {
+        return Results.BadRequest(new ErrorResponse
+        {
+            Error = "Repository URL is required."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Branch))
+    {
+        return Results.BadRequest(new ErrorResponse
+        {
+            Error = "Branch is required."
+        });
+    }
+
+    try
+    {
+        var snapshot = await ingestionService.IngestAsync(
+            request.RepositoryUrl,
+            request.Branch,
+            cancellationToken);
+
+        return Results.Ok(
+            new RepositoryIngestionResponse(
+                snapshot.Repository,
+                snapshot.Branch,
+                snapshot.Files.Count,
+                snapshot.Files
+                    .Select(file => file.Path)
+                    .ToList()));
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new ErrorResponse
+        {
+            Error = ex.Message
+        });
+    }
+    catch (HttpRequestException ex)
+    {
+        app.Logger.LogError(
+            ex,
+            "Error retrieving repository {RepositoryUrl}.",
+            request.RepositoryUrl);
+
+        return Results.Problem(
+            title: "Repository retrieval failed",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(
+            ex,
+            "Error ingesting repository {RepositoryUrl}.",
+            request.RepositoryUrl);
+
+        return Results.Problem(
+            title: "Repository ingestion failed",
+            detail: "The repository could not be ingested.",
+            statusCode: StatusCodes.Status500InternalServerError);
     }
 });
 
