@@ -6,7 +6,7 @@ using System.ClientModel;
 
 namespace Copilot.Api.Services;
 
-public class AzureOpenAIService
+public class AzureOpenAIService : IAzureOpenAIService
 {
     private readonly ResponsesClient _client;
     private readonly string _deploymentName;
@@ -43,12 +43,116 @@ public class AzureOpenAIService
             options);
     }
 
-    public async Task<string> GetResponseAsync(string message)
+    public async Task<string> GetResponseAsync(
+        List<ChatMessage> messages)
     {
+        var input = new List<ResponseItem>();
+
+        foreach (var message in messages)
+        {
+            if (message.Role.Equals("user", StringComparison.OrdinalIgnoreCase))
+            {
+                input.Add(
+                    ResponseItem.CreateUserMessageItem(message.Content));
+            }
+            else if (message.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase))
+            {
+                input.Add(
+                    ResponseItem.CreateAssistantMessageItem(message.Content));
+            }
+        }
+
         var result = await _client.CreateResponseAsync(
             _deploymentName,
-            message);
+            input);
 
-        return result.Value.GetOutputText();
+        if (result == null || result.Value == null)
+        {
+            throw new InvalidOperationException(
+                "Azure OpenAI returned an empty response.");
+        }
+
+        var outputText = result.Value.GetOutputText();
+
+        if (string.IsNullOrWhiteSpace(outputText))
+        {
+            throw new InvalidOperationException(
+                "Azure OpenAI returned no output text.");
+        }
+
+        return outputText;
     }
+    
+    public async IAsyncEnumerable<string> GetResponseStreamingAsync(
+        List<ChatMessage> messages)
+    {
+        if (messages == null || messages.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one chat message is required.",
+                nameof(messages));
+        }
+
+        var input = new List<ResponseItem>();
+
+        foreach (var message in messages)
+        {
+            if (message == null)
+            {
+                continue;
+            }
+
+            if (string.Equals(
+                    message.Role,
+                    "user",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(message.Content))
+                {
+                    input.Add(
+                        ResponseItem.CreateUserMessageItem(
+                            message.Content));
+                }
+            }
+            else if (string.Equals(
+                        message.Role,
+                        "assistant",
+                        StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(message.Content))
+                {
+                    input.Add(
+                        ResponseItem.CreateAssistantMessageItem(
+                            message.Content));
+                }
+            }
+        }
+
+        if (input.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "No valid messages were provided.");
+        }
+
+        var options = new CreateResponseOptions
+        {
+            Model = _deploymentName,
+            StreamingEnabled = true
+        };
+
+        foreach (var item in input)
+        {
+            options.InputItems.Add(item);
+        }
+
+        await foreach (var update in
+            _client.CreateResponseStreamingAsync(options))
+        {
+            if (update is StreamingResponseOutputTextDeltaUpdate textUpdate &&
+                !string.IsNullOrEmpty(textUpdate.Delta))
+            {
+                yield return textUpdate.Delta;
+            }
+        }
+    }    
 }

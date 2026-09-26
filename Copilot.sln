@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{789E9688-9687-46FB-8CAB-94C12BEAF101}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Copilot.Api.Tests", "tests\Copilot.Api.Tests\Copilot.Api.Tests.csproj", "{413087B6-DAD4-4643-9991-BF432FBF10CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -10,5 +14,14 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{413087B6-DAD4-4643-9991-BF432FBF10CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{413087B6-DAD4-4643-9991-BF432FBF10CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{413087B6-DAD4-4643-9991-BF432FBF10CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{413087B6-DAD4-4643-9991-BF432FBF10CE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{413087B6-DAD4-4643-9991-BF432FBF10CE} = {789E9688-9687-46FB-8CAB-94C12BEAF101}
 	EndGlobalSection
 EndGlobal
