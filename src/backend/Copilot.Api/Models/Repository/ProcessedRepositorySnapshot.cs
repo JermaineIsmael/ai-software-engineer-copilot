@@ -3,4 +3,5 @@ namespace Copilot.Api.Models.Repository;
 public sealed record ProcessedRepositorySnapshot(
     string Repository,
     string Branch,
-    IReadOnlyList<SourceFileMetadata> Files);
+    IReadOnlyList<SourceFileMetadata> Files,
+    IReadOnlyList<CodeChunk> Chunks);

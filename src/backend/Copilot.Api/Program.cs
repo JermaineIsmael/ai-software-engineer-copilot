@@ -18,6 +18,7 @@ builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(cl
 
 builder.Services.AddSingleton<ISourceFileClassifier, SourceFileClassifier>();
 builder.Services.AddScoped<ISourceFileMetadataService, SourceFileMetadataService>();
+builder.Services.AddSingleton<ICodeChunkingService, CodeChunkingService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
 
 builder.Services.AddCors(options =>
@@ -173,7 +174,9 @@ app.MapPost("/api/repositories/ingest", async (
                 snapshot.Repository,
                 snapshot.Branch,
                 snapshot.Files.Count,
-                snapshot.Files));
+                snapshot.Chunks.Count,
+                snapshot.Files,
+                snapshot.Chunks));
     }
     catch (ArgumentException ex)
     {

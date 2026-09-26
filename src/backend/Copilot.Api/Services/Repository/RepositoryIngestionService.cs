@@ -6,15 +6,18 @@ public sealed class RepositoryIngestionService : IRepositoryIngestionService
 {
     private readonly IRepositoryProvider _repositoryProvider;
     private readonly ISourceFileMetadataService _metadataService;
+    private readonly ICodeChunkingService _chunkingService;
     private readonly ILogger<RepositoryIngestionService> _logger;
 
     public RepositoryIngestionService(
         IRepositoryProvider repositoryProvider,
         ISourceFileMetadataService metadataService,
+        ICodeChunkingService chunkingService,
         ILogger<RepositoryIngestionService> logger)
     {
         _repositoryProvider = repositoryProvider;
         _metadataService = metadataService;
+        _chunkingService = chunkingService;
         _logger = logger;
     }
 
@@ -51,15 +54,21 @@ public sealed class RepositoryIngestionService : IRepositoryIngestionService
             .Select(_metadataService.Extract)
             .ToList();
 
+        var chunks = metadataFiles
+            .SelectMany(_chunkingService.Chunk)
+            .ToList();
+
         var processedSnapshot = new ProcessedRepositorySnapshot(
             snapshot.Repository,
             snapshot.Branch,
-            metadataFiles);
+            metadataFiles,
+            chunks);
 
         _logger.LogInformation(
-            "Repository ingestion completed for {Repository}. Retrieved {FileCount} files.",
+            "Repository ingestion completed for {Repository}. Retrieved {FileCount} files and created {ChunkCount} chunks.",
             processedSnapshot.Repository,
-            processedSnapshot.Files.Count);
+            processedSnapshot.Files.Count,
+            processedSnapshot.Chunks.Count);
 
         return processedSnapshot;
     }
