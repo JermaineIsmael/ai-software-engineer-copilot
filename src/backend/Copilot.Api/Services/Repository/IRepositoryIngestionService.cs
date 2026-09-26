@@ -4,7 +4,7 @@ namespace Copilot.Api.Services.Repository;
 
 public interface IRepositoryIngestionService
 {
-    Task<RepositorySnapshot> IngestAsync(
+    Task<ProcessedRepositorySnapshot> IngestAsync(
         string repositoryUrl,
         string branch,
         CancellationToken cancellationToken = default);

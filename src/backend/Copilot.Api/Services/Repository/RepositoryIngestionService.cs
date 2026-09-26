@@ -5,17 +5,20 @@ namespace Copilot.Api.Services.Repository;
 public sealed class RepositoryIngestionService : IRepositoryIngestionService
 {
     private readonly IRepositoryProvider _repositoryProvider;
+    private readonly ISourceFileMetadataService _metadataService;
     private readonly ILogger<RepositoryIngestionService> _logger;
 
     public RepositoryIngestionService(
         IRepositoryProvider repositoryProvider,
+        ISourceFileMetadataService metadataService,
         ILogger<RepositoryIngestionService> logger)
     {
         _repositoryProvider = repositoryProvider;
+        _metadataService = metadataService;
         _logger = logger;
     }
 
-    public async Task<RepositorySnapshot> IngestAsync(
+    public async Task<ProcessedRepositorySnapshot> IngestAsync(
         string repositoryUrl,
         string branch,
         CancellationToken cancellationToken = default)
@@ -44,11 +47,20 @@ public sealed class RepositoryIngestionService : IRepositoryIngestionService
             branch,
             cancellationToken);
 
+        var metadataFiles = snapshot.Files
+            .Select(_metadataService.Extract)
+            .ToList();
+
+        var processedSnapshot = new ProcessedRepositorySnapshot(
+            snapshot.Repository,
+            snapshot.Branch,
+            metadataFiles);
+
         _logger.LogInformation(
             "Repository ingestion completed for {Repository}. Retrieved {FileCount} files.",
-            snapshot.Repository,
-            snapshot.Files.Count);
+            processedSnapshot.Repository,
+            processedSnapshot.Files.Count);
 
-        return snapshot;
+        return processedSnapshot;
     }
 }

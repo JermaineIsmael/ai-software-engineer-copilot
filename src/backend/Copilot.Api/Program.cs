@@ -16,6 +16,8 @@ builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(cl
         new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 });
 
+builder.Services.AddSingleton<ISourceFileClassifier, SourceFileClassifier>();
+builder.Services.AddScoped<ISourceFileMetadataService, SourceFileMetadataService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
 
 builder.Services.AddCors(options =>
@@ -171,9 +173,7 @@ app.MapPost("/api/repositories/ingest", async (
                 snapshot.Repository,
                 snapshot.Branch,
                 snapshot.Files.Count,
-                snapshot.Files
-                    .Select(file => file.Path)
-                    .ToList()));
+                snapshot.Files));
     }
     catch (ArgumentException ex)
     {

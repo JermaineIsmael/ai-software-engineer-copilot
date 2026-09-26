@@ -1,7 +1,6 @@
 namespace Copilot.Api.Models.Repository;
 
-public sealed record RepositoryIngestionResponse(
+public sealed record ProcessedRepositorySnapshot(
     string Repository,
     string Branch,
-    int FileCount,
     IReadOnlyList<SourceFileMetadata> Files);
