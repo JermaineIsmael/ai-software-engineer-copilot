@@ -1,7 +1,9 @@
 using System.Net.Http.Headers;
+using Copilot.Api.Endpoints;
 using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
 using Copilot.Api.Services.Search;
+using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Models.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,8 +13,24 @@ builder.Services
     .Bind(builder.Configuration.GetSection(
         Copilot.Api.Configuration.AzureSearchOptions.SectionName));
 
+builder.Services
+    .AddOptions<Copilot.Api.Configuration.RetrievalOptions>()
+    .Bind(builder.Configuration.GetSection(
+        Copilot.Api.Configuration.RetrievalOptions.SectionName));
+
+builder.Services
+    .AddOptions<Copilot.Api.Configuration.RetrievalContextOptions>()
+    .Bind(builder.Configuration.GetSection(
+        Copilot.Api.Configuration.RetrievalContextOptions.SectionName));
+
+
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
 builder.Services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
+builder.Services.AddScoped<IQueryEmbeddingService, QueryEmbeddingService>();
+builder.Services.AddScoped<ICodeRetrievalService, CodeRetrievalService>();
+builder.Services.AddScoped<IRetrievalResultProcessor, RetrievalResultProcessor>();
+builder.Services.AddScoped<ICodeContextBuilder, CodeContextBuilder>();
+
 
 builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(client =>
 {
@@ -45,6 +63,16 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+
+    var indexManagementService =
+        scope.ServiceProvider.GetRequiredService<ISearchIndexManagementService>();
+
+    await indexManagementService.EnsureIndexAsync();
+}
 
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
@@ -225,6 +253,8 @@ app.MapPost("/api/repositories/ingest", async (
     }
 });
 
+app.MapRetrievalEndpoints();
+
 app.Run();
 
 public partial class Program
@@ -246,9 +276,4 @@ public class ErrorResponse
 {
     public string Error { get; set; } = string.Empty;
 }
-
-
-
-
-
 

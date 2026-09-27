@@ -82,7 +82,8 @@ public sealed class HybridSearchService : IHybridSearchService
 
         var searchOptions = new SearchOptions
         {
-            Size = top
+            Size = top,
+            VectorSearch = new VectorSearchOptions()
         };
 
         searchOptions.VectorSearch.Queries.Add(vectorQuery);
