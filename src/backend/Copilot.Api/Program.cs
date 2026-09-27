@@ -4,6 +4,7 @@ using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
 using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
+using Copilot.Api.Services.Copilot;
 using Copilot.Api.Models.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +31,14 @@ builder.Services.AddScoped<IQueryEmbeddingService, QueryEmbeddingService>();
 builder.Services.AddScoped<ICodeRetrievalService, CodeRetrievalService>();
 builder.Services.AddScoped<IRetrievalResultProcessor, RetrievalResultProcessor>();
 builder.Services.AddScoped<ICodeContextBuilder, CodeContextBuilder>();
+
+builder.Services.AddScoped<
+    ICodeAnswerGenerationService,
+    AzureOpenAICodeAnswerGenerationService>();
+
+builder.Services.AddScoped<
+    ICodeCopilotService,
+    CodeCopilotService>();
 
 
 builder.Services.AddHttpClient<IRepositoryProvider, GitHubRepositoryProvider>(client =>
@@ -254,6 +263,7 @@ app.MapPost("/api/repositories/ingest", async (
 });
 
 app.MapRetrievalEndpoints();
+app.MapCopilotEndpoints();
 
 app.Run();
 
