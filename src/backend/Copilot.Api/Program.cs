@@ -1,9 +1,15 @@
 using System.Net.Http.Headers;
 using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
+using Copilot.Api.Services.Search;
 using Copilot.Api.Models.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddOptions<Copilot.Api.Configuration.AzureSearchOptions>()
+    .Bind(builder.Configuration.GetSection(
+        Copilot.Api.Configuration.AzureSearchOptions.SectionName));
 
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
 builder.Services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
@@ -21,6 +27,8 @@ builder.Services.AddSingleton<ISourceFileClassifier, SourceFileClassifier>();
 builder.Services.AddScoped<ISourceFileMetadataService, SourceFileMetadataService>();
 builder.Services.AddSingleton<ICodeChunkingService, CodeChunkingService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
+builder.Services.AddSingleton<ISearchIndexDefinitionService, SearchIndexDefinitionService>();
+builder.Services.AddSingleton<ISearchIndexManagementService, SearchIndexManagementService>();
 
 builder.Services.AddCors(options =>
 {
@@ -235,4 +243,6 @@ public class ErrorResponse
 {
     public string Error { get; set; } = string.Empty;
 }
+
+
 
