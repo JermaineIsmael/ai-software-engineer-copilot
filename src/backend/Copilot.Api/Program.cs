@@ -29,6 +29,9 @@ builder.Services.AddSingleton<ICodeChunkingService, CodeChunkingService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
 builder.Services.AddSingleton<ISearchIndexDefinitionService, SearchIndexDefinitionService>();
 builder.Services.AddSingleton<ISearchIndexManagementService, SearchIndexManagementService>();
+builder.Services.AddSingleton<ISearchDocumentIndexingService, SearchDocumentIndexingService>();
+builder.Services.AddSingleton<IVectorSearchService, VectorSearchService>();
+builder.Services.AddSingleton<IHybridSearchService, HybridSearchService>();
 
 builder.Services.AddCors(options =>
 {
@@ -243,6 +246,9 @@ public class ErrorResponse
 {
     public string Error { get; set; } = string.Empty;
 }
+
+
+
 
 
 
