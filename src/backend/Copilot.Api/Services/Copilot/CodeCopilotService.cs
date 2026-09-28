@@ -1,6 +1,7 @@
 using Copilot.Api.Models.Copilot;
 using Copilot.Api.Models.Retrieval;
 using Copilot.Api.Services.Retrieval;
+using Copilot.Api.Services.Tools;
 
 namespace Copilot.Api.Services.Copilot;
 
@@ -9,11 +10,15 @@ public sealed class CodeCopilotService : ICodeCopilotService
     private readonly ICodeRetrievalService _retrievalService;
     private readonly ICodeContextBuilder _contextBuilder;
     private readonly ICodeAnswerGenerationService _answerGenerationService;
+    private readonly IToolCallingCodeAnswerGenerationService? _toolCallingAnswerGenerationService;
+    private readonly ICopilotToolRegistry? _toolRegistry;
 
     public CodeCopilotService(
         ICodeRetrievalService retrievalService,
         ICodeContextBuilder contextBuilder,
-        ICodeAnswerGenerationService answerGenerationService)
+        ICodeAnswerGenerationService answerGenerationService,
+        IToolCallingCodeAnswerGenerationService? toolCallingAnswerGenerationService = null,
+        ICopilotToolRegistry? toolRegistry = null)
     {
         ArgumentNullException.ThrowIfNull(retrievalService);
         ArgumentNullException.ThrowIfNull(contextBuilder);
@@ -22,6 +27,8 @@ public sealed class CodeCopilotService : ICodeCopilotService
         _retrievalService = retrievalService;
         _contextBuilder = contextBuilder;
         _answerGenerationService = answerGenerationService;
+        _toolCallingAnswerGenerationService = toolCallingAnswerGenerationService;
+        _toolRegistry = toolRegistry;
     }
 
     public async Task<CopilotResponse> AskAsync(
@@ -60,6 +67,24 @@ public sealed class CodeCopilotService : ICodeCopilotService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (_toolCallingAnswerGenerationService is not null &&
+            _toolRegistry is not null)
+        {
+            var tools = _toolRegistry.GetTools();
+
+            var toolAnswer =
+                await _toolCallingAnswerGenerationService.GenerateAsync(
+                    request.Query,
+                    request.Repository,
+                    request.Branch,
+                    tools,
+                    cancellationToken);
+
+            return new CopilotResponse(
+                request.Query,
+                toolAnswer,
+                Array.Empty<CopilotSource>());
+        }
         var retrievalResponse =
             await _retrievalService.RetrieveAsync(
                 new CodeRetrievalRequest(
