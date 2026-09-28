@@ -5,25 +5,52 @@ namespace Copilot.Api.Tests.Retrieval;
 public sealed class CodeRetrievalRequestTests
 {
     [Fact]
-    public void Constructor_ShouldStoreQueryAndTop()
+    public void Constructor_ShouldStoreValues()
     {
         var request = new CodeRetrievalRequest(
-            "How is authentication handled?",
+            "authentication",
+            "owner/repository",
+            "main",
             10);
 
         Assert.Equal(
-            "How is authentication handled?",
+            "authentication",
             request.Query);
 
-        Assert.Equal(10, request.Top);
+        Assert.Equal(
+            "owner/repository",
+            request.Repository);
+
+        Assert.Equal(
+            "main",
+            request.Branch);
+
+        Assert.Equal(
+            10,
+            request.Top);
     }
 
     [Fact]
-    public void Constructor_ShouldUseDefaultTop()
+    public void Constructor_ShouldDefaultBranchAndTop()
     {
         var request = new CodeRetrievalRequest(
-            "How is authentication handled?");
+            "authentication",
+            "owner/repository");
 
-        Assert.Equal(5, request.Top);
+        Assert.Equal(
+            "authentication",
+            request.Query);
+
+        Assert.Equal(
+            "owner/repository",
+            request.Repository);
+
+        Assert.Equal(
+            "main",
+            request.Branch);
+
+        Assert.Equal(
+            5,
+            request.Top);
     }
 }

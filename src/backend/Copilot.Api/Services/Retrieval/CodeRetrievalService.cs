@@ -37,6 +37,20 @@ public sealed class CodeRetrievalService : ICodeRetrievalService
                 nameof(request));
         }
 
+        if (string.IsNullOrWhiteSpace(request.Repository))
+        {
+            throw new ArgumentException(
+                "Repository cannot be empty.",
+                nameof(request));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Branch))
+        {
+            throw new ArgumentException(
+                "Branch cannot be empty.",
+                nameof(request));
+        }
+
         if (request.Top <= 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -56,6 +70,8 @@ public sealed class CodeRetrievalService : ICodeRetrievalService
                 request.Query,
                 queryEmbedding,
                 request.Top,
+                request.Repository,
+                request.Branch,
                 cancellationToken);
 
         var processedResults =

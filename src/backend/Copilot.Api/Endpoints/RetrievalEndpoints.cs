@@ -39,6 +39,24 @@ public static class RetrievalEndpoints
                 });
         }
 
+        if (string.IsNullOrWhiteSpace(request.Repository))
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error = "Repository cannot be empty."
+                });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Branch))
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error = "Branch cannot be empty."
+                });
+        }
+
         if (request.Top <= 0)
         {
             return Results.BadRequest(

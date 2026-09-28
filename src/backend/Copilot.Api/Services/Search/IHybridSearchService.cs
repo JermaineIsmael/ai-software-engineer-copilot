@@ -7,6 +7,8 @@ public interface IHybridSearchService
     Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
         string query,
         IReadOnlyList<float> queryEmbedding,
-        int top = 5,
+        int top,
+        string repository,
+        string branch,
         CancellationToken cancellationToken = default);
 }

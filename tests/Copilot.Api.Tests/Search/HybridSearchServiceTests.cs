@@ -80,7 +80,10 @@ public sealed class HybridSearchServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.SearchAsync(
                 string.Empty,
-                new[] { 0.1f, 0.2f }));
+                new[] { 0.1f, 0.2f },
+                5,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -91,7 +94,10 @@ public sealed class HybridSearchServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.SearchAsync(
                 "   ",
-                new[] { 0.1f, 0.2f }));
+                new[] { 0.1f, 0.2f },
+                5,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -102,7 +108,10 @@ public sealed class HybridSearchServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => service.SearchAsync(
                 "find authentication code",
-                null!));
+                null!,
+                5,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -113,7 +122,10 @@ public sealed class HybridSearchServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.SearchAsync(
                 "find authentication code",
-                Array.Empty<float>()));
+                Array.Empty<float>(),
+                5,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -125,7 +137,9 @@ public sealed class HybridSearchServiceTests
             () => service.SearchAsync(
                 "find authentication code",
                 new[] { 0.1f, 0.2f },
-                0));
+                0,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -137,7 +151,9 @@ public sealed class HybridSearchServiceTests
             () => service.SearchAsync(
                 "find authentication code",
                 new[] { 0.1f, 0.2f },
-                -1));
+                -1,
+                "owner/repository",
+                "main"));
     }
 
     [Fact]
@@ -154,7 +170,10 @@ public sealed class HybridSearchServiceTests
             () => service.SearchAsync(
                 "find authentication code",
                 new[] { 0.1f, 0.2f },
-                cancellationToken: cancellationTokenSource.Token));
+                5,
+                "owner/repository",
+                "main",
+                cancellationTokenSource.Token));
     }
 
     private static HybridSearchService CreateService()
@@ -170,3 +189,5 @@ public sealed class HybridSearchServiceTests
         return new HybridSearchService(options);
     }
 }
+
+

@@ -35,6 +35,8 @@ public sealed class CodeRetrievalServiceTests
 
         var request = new CodeRetrievalRequest(
             "How is authentication handled?",
+            "owner/repository",
+            "main",
             5);
 
         var response = await service.RetrieveAsync(request);
@@ -54,6 +56,14 @@ public sealed class CodeRetrievalServiceTests
         Assert.Equal(
             request.Top,
             searchService.ReceivedTop);
+
+        Assert.Equal(
+            request.Repository,
+            searchService.ReceivedRepository);
+
+        Assert.Equal(
+            request.Branch,
+            searchService.ReceivedBranch);
 
         Assert.Equal(
             request.Query,
@@ -76,6 +86,8 @@ public sealed class CodeRetrievalServiceTests
         var response = await service.RetrieveAsync(
             new CodeRetrievalRequest(
                 "authentication",
+                "owner/repository",
+                "main",
                 5));
 
         var result = response.Results.Single();
@@ -119,6 +131,8 @@ public sealed class CodeRetrievalServiceTests
         var response = await service.RetrieveAsync(
             new CodeRetrievalRequest(
                 "authentication",
+                "owner/repository",
+                "main",
                 5));
 
         Assert.Equal(
@@ -148,6 +162,8 @@ public sealed class CodeRetrievalServiceTests
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
                     string.Empty,
+                    "owner/repository",
+                    "main",
                     5)));
     }
 
@@ -160,6 +176,68 @@ public sealed class CodeRetrievalServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
+                    "   ",
+                    "owner/repository",
+                    "main",
+                    5)));
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_ShouldRejectEmptyRepository()
+    {
+        var service = CreateService(
+            Array.Empty<HybridSearchResult>());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RetrieveAsync(
+                new CodeRetrievalRequest(
+                    "authentication",
+                    string.Empty,
+                    "main",
+                    5)));
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_ShouldRejectWhitespaceRepository()
+    {
+        var service = CreateService(
+            Array.Empty<HybridSearchResult>());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RetrieveAsync(
+                new CodeRetrievalRequest(
+                    "authentication",
+                    "   ",
+                    "main",
+                    5)));
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_ShouldRejectEmptyBranch()
+    {
+        var service = CreateService(
+            Array.Empty<HybridSearchResult>());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RetrieveAsync(
+                new CodeRetrievalRequest(
+                    "authentication",
+                    "owner/repository",
+                    string.Empty,
+                    5)));
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_ShouldRejectWhitespaceBranch()
+    {
+        var service = CreateService(
+            Array.Empty<HybridSearchResult>());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RetrieveAsync(
+                new CodeRetrievalRequest(
+                    "authentication",
+                    "owner/repository",
                     "   ",
                     5)));
     }
@@ -174,6 +252,8 @@ public sealed class CodeRetrievalServiceTests
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
                     "authentication",
+                    "owner/repository",
+                    "main",
                     0)));
     }
 
@@ -192,6 +272,8 @@ public sealed class CodeRetrievalServiceTests
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
                     "authentication",
+                    "owner/repository",
+                    "main",
                     5),
                 cancellationTokenSource.Token));
     }
@@ -215,6 +297,8 @@ public sealed class CodeRetrievalServiceTests
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
                     "authentication",
+                    "owner/repository",
+                    "main",
                     5)));
 
         Assert.Null(searchService.ReceivedQuery);
@@ -239,6 +323,8 @@ public sealed class CodeRetrievalServiceTests
             () => service.RetrieveAsync(
                 new CodeRetrievalRequest(
                     "authentication",
+                    "owner/repository",
+                    "main",
                     5)));
     }
 
@@ -347,10 +433,16 @@ public sealed class CodeRetrievalServiceTests
 
         public int ReceivedTop { get; private set; }
 
+        public string? ReceivedRepository { get; private set; }
+
+        public string? ReceivedBranch { get; private set; }
+
         public Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
             string query,
             IReadOnlyList<float> queryEmbedding,
-            int top = 5,
+            int top,
+            string repository,
+            string branch,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -358,6 +450,8 @@ public sealed class CodeRetrievalServiceTests
             ReceivedQuery = query;
             ReceivedEmbedding = queryEmbedding;
             ReceivedTop = top;
+            ReceivedRepository = repository;
+            ReceivedBranch = branch;
 
             return Task.FromResult(_results);
         }
@@ -369,7 +463,9 @@ public sealed class CodeRetrievalServiceTests
         public Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
             string query,
             IReadOnlyList<float> queryEmbedding,
-            int top = 5,
+            int top,
+            string repository,
+            string branch,
             CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException(
@@ -377,8 +473,3 @@ public sealed class CodeRetrievalServiceTests
         }
     }
 }
-
-
-
-
-

@@ -37,6 +37,20 @@ public sealed class CodeCopilotService : ICodeCopilotService
                 nameof(request));
         }
 
+        if (string.IsNullOrWhiteSpace(request.Repository))
+        {
+            throw new ArgumentException(
+                "Repository cannot be empty.",
+                nameof(request));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Branch))
+        {
+            throw new ArgumentException(
+                "Branch cannot be empty.",
+                nameof(request));
+        }
+
         if (request.Top <= 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -50,6 +64,8 @@ public sealed class CodeCopilotService : ICodeCopilotService
             await _retrievalService.RetrieveAsync(
                 new CodeRetrievalRequest(
                     request.Query,
+                    request.Repository,
+                    request.Branch,
                     request.Top),
                 cancellationToken);
 

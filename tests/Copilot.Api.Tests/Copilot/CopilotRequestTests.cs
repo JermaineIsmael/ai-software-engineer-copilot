@@ -5,16 +5,28 @@ namespace Copilot.Api.Tests.Copilot;
 public sealed class CopilotRequestTests
 {
     [Fact]
-    public void Constructor_PreservesValues()
+    public void Constructor_ShouldStoreValues()
     {
         var request = new CopilotRequest(
-            "Where is the Service Bus handler?",
+            "How is authentication handled?",
+            "owner/repository",
+            "main",
             10);
 
         Assert.Equal(
-            "Where is the Service Bus handler?",
+            "How is authentication handled?",
             request.Query);
 
-        Assert.Equal(10, request.Top);
+        Assert.Equal(
+            "owner/repository",
+            request.Repository);
+
+        Assert.Equal(
+            "main",
+            request.Branch);
+
+        Assert.Equal(
+            10,
+            request.Top);
     }
 }

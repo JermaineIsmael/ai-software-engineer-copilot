@@ -55,9 +55,7 @@ public sealed class CodeCopilotServiceTests
 
         var response =
             await service.AskAsync(
-                new CopilotRequest(
-                    "Where is the handler?",
-                    5));
+                new CopilotRequest("Where is the handler?", "owner/repository", "main", 5));
 
         Assert.Equal(
             "The handler is in Handler.cs.",
@@ -108,9 +106,7 @@ public sealed class CodeCopilotServiceTests
 
         var response =
             await service.AskAsync(
-                new CopilotRequest(
-                    "Where is the handler?",
-                    5));
+                new CopilotRequest("Where is the handler?", "owner/repository", "main", 5));
 
         Assert.Contains(
             "could not find relevant code",
@@ -146,6 +142,8 @@ public sealed class CodeCopilotServiceTests
             () => service.AskAsync(
                 new CopilotRequest(
                     string.Empty,
+                    "owner/repository",
+                    "main",
                     5)));
     }
 
@@ -171,8 +169,10 @@ public sealed class CodeCopilotServiceTests
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => service.AskAsync(
-                new CopilotRequest(
-                    "test",
-                    0)));
+                new CopilotRequest("test", "owner/repository", "main", 0)));
     }
 }
+
+
+
+

@@ -45,7 +45,9 @@ public sealed class HybridSearchService : IHybridSearchService
     public async Task<IReadOnlyList<HybridSearchResult>> SearchAsync(
         string query,
         IReadOnlyList<float> queryEmbedding,
-        int top = 5,
+        int top,
+        string repository,
+        string branch,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -71,6 +73,20 @@ public sealed class HybridSearchService : IHybridSearchService
                 "Top must be greater than zero.");
         }
 
+        if (string.IsNullOrWhiteSpace(repository))
+        {
+            throw new ArgumentException(
+                "Repository cannot be empty.",
+                nameof(repository));
+        }
+
+        if (string.IsNullOrWhiteSpace(branch))
+        {
+            throw new ArgumentException(
+                "Branch cannot be empty.",
+                nameof(branch));
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         var vectorQuery = new VectorizedQuery(
@@ -83,7 +99,10 @@ public sealed class HybridSearchService : IHybridSearchService
         var searchOptions = new SearchOptions
         {
             Size = top,
-            VectorSearch = new VectorSearchOptions()
+            VectorSearch = new VectorSearchOptions(),
+            Filter =
+                $"repository eq '{EscapeODataValue(repository)}' " +
+                $"and branch eq '{EscapeODataValue(branch)}'"
         };
 
         searchOptions.VectorSearch.Queries.Add(vectorQuery);
@@ -114,6 +133,12 @@ public sealed class HybridSearchService : IHybridSearchService
         }
 
         return results;
+    }
+
+    private static string EscapeODataValue(
+        string value)
+    {
+        return value.Replace("'", "''");
     }
 
     private static string GetString(
