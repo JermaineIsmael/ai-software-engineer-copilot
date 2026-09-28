@@ -4,6 +4,7 @@ using Copilot.Api.Models.Repository;
 using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
 using Copilot.Api.Services.Tools;
+using Copilot.Api.Services.TestGeneration;
 using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Copilot;
@@ -93,6 +94,9 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<ICodeReviewService, CodeReviewService>();
+builder.Services.AddScoped<
+    ITestGenerationService,
+    TestGenerationService>();
 var app = builder.Build();
 
 if (!app.Environment.IsEnvironment("Testing"))
@@ -289,6 +293,8 @@ app.MapFileInspectionEndpoints();
 app.MapCopilotEndpoints();
 
 app.MapCodeReviewEndpoints();
+app.MapTestGenerationEndpoints();
+
 app.Run();
 
 public partial class Program
