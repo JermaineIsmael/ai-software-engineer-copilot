@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using Copilot.Api.Endpoints;
+using Copilot.Api.Models.Repository;
 using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
 using Copilot.Api.Services.Tools;
@@ -7,7 +8,9 @@ using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Copilot;
 using Copilot.Api.Services.FileInspection;
-using Copilot.Api.Models.Repository;
+using Copilot.Api.Services.CodeReview;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +92,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddScoped<ICodeReviewService, CodeReviewService>();
 var app = builder.Build();
 
 if (!app.Environment.IsEnvironment("Testing"))
@@ -284,6 +288,7 @@ app.MapRetrievalEndpoints();
 app.MapFileInspectionEndpoints();
 app.MapCopilotEndpoints();
 
+app.MapCodeReviewEndpoints();
 app.Run();
 
 public partial class Program
