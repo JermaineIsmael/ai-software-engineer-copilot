@@ -8,6 +8,7 @@ using Copilot.Api.Services.TestGeneration;
 using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Copilot;
+using Copilot.Api.Services.ArchitectureAnalysis;
 using Copilot.Api.Services.FileInspection;
 using Copilot.Api.Services.CodeReview;
 
@@ -97,6 +98,10 @@ builder.Services.AddScoped<ICodeReviewService, CodeReviewService>();
 builder.Services.AddScoped<
     ITestGenerationService,
     TestGenerationService>();
+builder.Services.AddScoped<
+    IArchitectureAnalysisService,
+    ArchitectureAnalysisService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsEnvironment("Testing"))
@@ -294,6 +299,8 @@ app.MapCopilotEndpoints();
 
 app.MapCodeReviewEndpoints();
 app.MapTestGenerationEndpoints();
+
+app.MapArchitectureAnalysisEndpoints();
 
 app.Run();
 
