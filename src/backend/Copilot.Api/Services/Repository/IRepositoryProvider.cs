@@ -8,4 +8,10 @@ public interface IRepositoryProvider
         string repositoryUrl,
         string branch,
         CancellationToken cancellationToken = default);
+
+    Task<RepositoryFile> GetFileAsync(
+        string repositoryUrl,
+        string path,
+        string branch,
+        CancellationToken cancellationToken = default);
 }

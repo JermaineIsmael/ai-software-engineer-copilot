@@ -5,6 +5,7 @@ using Copilot.Api.Services.Repository;
 using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Copilot;
+using Copilot.Api.Services.FileInspection;
 using Copilot.Api.Models.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,6 +55,7 @@ builder.Services.AddSingleton<ISourceFileClassifier, SourceFileClassifier>();
 builder.Services.AddScoped<ISourceFileMetadataService, SourceFileMetadataService>();
 builder.Services.AddSingleton<ICodeChunkingService, CodeChunkingService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
+builder.Services.AddScoped<IFileInspectionService, FileInspectionService>();
 builder.Services.AddSingleton<ISearchIndexDefinitionService, SearchIndexDefinitionService>();
 builder.Services.AddSingleton<ISearchIndexManagementService, SearchIndexManagementService>();
 builder.Services.AddSingleton<ISearchDocumentIndexingService, SearchDocumentIndexingService>();
@@ -263,6 +265,7 @@ app.MapPost("/api/repositories/ingest", async (
 });
 
 app.MapRetrievalEndpoints();
+app.MapFileInspectionEndpoints();
 app.MapCopilotEndpoints();
 
 app.Run();
@@ -286,4 +289,3 @@ public class ErrorResponse
 {
     public string Error { get; set; } = string.Empty;
 }
-

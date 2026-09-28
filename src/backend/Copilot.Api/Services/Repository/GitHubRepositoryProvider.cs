@@ -131,6 +131,35 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
             repositoryFiles);
     }
 
+    public async Task<RepositoryFile> GetFileAsync(
+        string repositoryUrl,
+        string path,
+        string branch,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException(
+                "File path cannot be empty.",
+                nameof(path));
+        }
+
+        var repository = ParseRepository(repositoryUrl);
+
+        var content = await GetFileContentAsync(
+            repository.Owner,
+            repository.Name,
+            path,
+            branch,
+            cancellationToken);
+
+        return new RepositoryFile(
+            $"{repository.Owner}/{repository.Name}",
+            branch,
+            path,
+            GetLanguage(path),
+            content);
+    }
     private async Task<string> GetFileContentAsync(
         string owner,
         string name,

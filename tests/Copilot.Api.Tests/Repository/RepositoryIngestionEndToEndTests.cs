@@ -87,6 +87,20 @@ public sealed class RepositoryIngestionEndToEndTests
             _snapshot = snapshot;
         }
 
+        public Task<RepositoryFile> GetFileAsync(
+            string repositoryUrl,
+            string path,
+            string branch,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(
+                new RepositoryFile(
+                    "test/repository",
+                    branch,
+                    path,
+                    "cs",
+                    "test content"));
+        }
         public Task<RepositorySnapshot> GetRepositoryAsync(
             string repositoryUrl,
             string branch,
@@ -120,4 +134,3 @@ public sealed class RepositoryIngestionEndToEndTests
         }
     }
 }
-
