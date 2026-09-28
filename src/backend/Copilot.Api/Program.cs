@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Copilot.Api.Endpoints;
 using Copilot.Api.Services;
 using Copilot.Api.Services.Repository;
+using Copilot.Api.Services.Tools;
 using Copilot.Api.Services.Search;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Copilot;
@@ -56,6 +57,21 @@ builder.Services.AddScoped<ISourceFileMetadataService, SourceFileMetadataService
 builder.Services.AddSingleton<ICodeChunkingService, CodeChunkingService>();
 builder.Services.AddScoped<IRepositoryIngestionService, RepositoryIngestionService>();
 builder.Services.AddScoped<IFileInspectionService, FileInspectionService>();
+
+builder.Services.AddScoped<CodeSearchTool>();
+builder.Services.AddScoped<FileInspectionTool>();
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<CodeSearchTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<FileInspectionTool>());
+
+builder.Services.AddScoped<ICopilotToolRegistry, CopilotToolRegistry>();
+
+builder.Services.AddScoped<
+    IToolCallingCodeAnswerGenerationService,
+    AzureOpenAIToolCallingCodeAnswerGenerationService>();
 builder.Services.AddSingleton<ISearchIndexDefinitionService, SearchIndexDefinitionService>();
 builder.Services.AddSingleton<ISearchIndexManagementService, SearchIndexManagementService>();
 builder.Services.AddSingleton<ISearchDocumentIndexingService, SearchDocumentIndexingService>();
