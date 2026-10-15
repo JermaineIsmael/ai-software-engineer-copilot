@@ -1,5 +1,7 @@
 using Copilot.Api.Models.Copilot;
+using Copilot.Api.Models.Retrieval;
 using Copilot.Api.Services.Copilot;
+using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Tools;
 
 namespace Copilot.Api.Tests.Copilot;
@@ -200,19 +202,19 @@ public sealed class CodeCopilotToolCallingTests
         {
             return Task.FromResult(
                 new CodeRetrievalResponse(
-                    request,
-                    Array.Empty<CodeRetrievalResult>()));
+                    request.Query,
+                    Array.Empty<RetrievedCodeChunk>()));
         }
     }
 
     private sealed class FakeContextBuilder : ICodeContextBuilder
     {
-        public CodeContext Build(
-            IReadOnlyList<CodeRetrievalResult> results)
+        public CodeRetrievalContext Build(
+            IReadOnlyList<RetrievedCodeChunk> chunks)
         {
-            return new CodeContext(
-                Array.Empty<CodeContextChunk>(),
-                string.Empty);
+            return new CodeRetrievalContext(
+                string.Empty,
+                Array.Empty<RetrievedCodeChunk>());
         }
     }
 
