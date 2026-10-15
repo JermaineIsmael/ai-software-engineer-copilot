@@ -30,6 +30,7 @@ This page provides navigation and quick reference for all AI Software Engineer C
 
 - [Product Requirements](product/product-requirements.md) - Vision, use cases, and requirements
 - [Feature Roadmap](product/feature-roadmap.md) - Planned features and sprint timeline
+- **[Sprint Roadmap](product/sprint-roadmap.md)** - Detailed sprint plans, acceptance criteria, and release procedures (Sprints 1-10)
 - [MVP Definition](product/mvp-definition.md) - MVP scope and readiness criteria
 
 ## Development
@@ -95,11 +96,12 @@ This page provides navigation and quick reference for all AI Software Engineer C
 
 **Implementing a new feature:**
 1. [Product Requirements](product/product-requirements.md) (understand the need)
-2. [Feature Roadmap](product/feature-roadmap.md) (check priority and dependencies)
-3. [Backend Instructions](.github/instructions/backend.instructions.md) (implementation patterns)
-4. [Coding Standards](development/coding-standards.md) (code quality)
-5. [Testing Strategy](development/testing-strategy.md) (test approach)
-6. [Component Design](architecture/component-design.md) (reference implementations)
+2. [Sprint Roadmap](product/sprint-roadmap.md) (find your sprint and task)
+3. [Feature Roadmap](product/feature-roadmap.md) (check priority and dependencies)
+4. [Backend Instructions](.github/instructions/backend.instructions.md) (implementation patterns)
+5. [Coding Standards](development/coding-standards.md) (code quality)
+6. [Testing Strategy](development/testing-strategy.md) (test approach)
+7. [Component Design](architecture/component-design.md) (reference implementations)
 
 **Fixing a bug:**
 1. [Troubleshooting](runbooks/troubleshooting.md) (understand the issue)
@@ -131,7 +133,8 @@ docs/
 │       └── 0001-minimal-apis.md
 ├── product/                         # Product definition
 │   ├── product-requirements.md      # Vision and requirements
-│   ├── feature-roadmap.md           # Sprint planning
+│   ├── feature-roadmap.md           # Sprint planning (high-level)
+│   ├── sprint-roadmap.md            # Detailed sprint roadmap (Sprints 1-10)
 │   └── mvp-definition.md            # MVP scope
 ├── development/                     # Development practices
 │   ├── implementation-status.md     # Feature status tracking
