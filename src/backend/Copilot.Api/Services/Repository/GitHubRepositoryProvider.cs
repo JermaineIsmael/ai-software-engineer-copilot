@@ -58,8 +58,62 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
     {
         var repository = ParseRepository(repositoryUrl);
 
+        var repositoryUrlPath =
+            $"repos/{repository.Owner}/{repository.Name}";
+
+        using var repositoryResponse = await _httpClient.GetAsync(
+            repositoryUrlPath,
+            cancellationToken);
+
+        if (!repositoryResponse.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"GitHub repository request failed with status code {(int)repositoryResponse.StatusCode}.");
+        }
+
+        await using var repositoryStream =
+            await repositoryResponse.Content.ReadAsStreamAsync(cancellationToken);
+
+        var repositoryDetails =
+            await JsonSerializer.DeserializeAsync<GitHubRepositoryResponse>(
+                repositoryStream,
+                cancellationToken: cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(repositoryDetails?.DefaultBranch))
+        {
+            throw new InvalidOperationException(
+                "GitHub returned repository metadata without a default branch.");
+        }
+
+        var commitUrl =
+            $"{repositoryUrlPath}/commits/{Uri.EscapeDataString(branch)}";
+
+        using var commitResponse = await _httpClient.GetAsync(
+            commitUrl,
+            cancellationToken);
+
+        if (!commitResponse.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"GitHub repository commit request failed with status code {(int)commitResponse.StatusCode}.");
+        }
+
+        await using var commitStream =
+            await commitResponse.Content.ReadAsStreamAsync(cancellationToken);
+
+        var commit =
+            await JsonSerializer.DeserializeAsync<GitHubCommitResponse>(
+                commitStream,
+                cancellationToken: cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(commit?.Sha))
+        {
+            throw new InvalidOperationException(
+                "GitHub returned a commit without a SHA.");
+        }
+
         var treeUrl =
-            $"repos/{repository.Owner}/{repository.Name}/git/trees/{Uri.EscapeDataString(branch)}?recursive=1";
+            $"{repositoryUrlPath}/git/trees/{Uri.EscapeDataString(commit.Sha)}?recursive=1";
 
         using var treeResponse = await _httpClient.GetAsync(
             treeUrl,
@@ -86,12 +140,19 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
                 "GitHub returned an invalid or empty repository tree.");
         }
 
+        if (tree.Truncated)
+        {
+            throw new InvalidOperationException(
+                "GitHub returned a truncated repository tree.");
+        }
+
         var files = tree.Tree
             .Where(item => item.Type == "blob")
             .Where(item => IsSupportedFile(item.Path))
             .ToList();
 
         var repositoryFiles = new List<RepositoryFile>();
+        var failedFiles = new List<string>();
 
         foreach (var file in files)
         {
@@ -103,7 +164,7 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
                     repository.Owner,
                     repository.Name,
                     file.Path,
-                    branch,
+                    commit.Sha,
                     cancellationToken);
 
                 repositoryFiles.Add(
@@ -122,13 +183,19 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
                     ex,
                     "Unable to retrieve repository file {FilePath}.",
                     file.Path);
+                failedFiles.Add(file.Path);
             }
         }
 
         return new RepositorySnapshot(
             $"{repository.Owner}/{repository.Name}",
             branch,
-            repositoryFiles);
+            repositoryFiles)
+        {
+            CommitSha = commit.Sha,
+            DefaultBranch = repositoryDetails.DefaultBranch,
+            FailedFiles = failedFiles
+        };
     }
 
     public async Task<RepositoryFile> GetFileAsync(
@@ -187,7 +254,7 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
             stream,
             cancellationToken: cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(file?.Content))
+        if (file?.Content is null)
         {
             throw new InvalidOperationException(
                 $"GitHub returned no content for '{path}'.");
@@ -307,10 +374,25 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
         string Owner,
         string Name);
 
+    private sealed class GitHubRepositoryResponse
+    {
+        [JsonPropertyName("default_branch")]
+        public string DefaultBranch { get; set; } = string.Empty;
+    }
+
+    private sealed class GitHubCommitResponse
+    {
+        [JsonPropertyName("sha")]
+        public string Sha { get; set; } = string.Empty;
+    }
+
     private sealed class GitHubTreeResponse
     {
         [JsonPropertyName("tree")]
         public List<GitHubTreeItem> Tree { get; set; } = [];
+
+        [JsonPropertyName("truncated")]
+        public bool Truncated { get; set; }
     }
 
     private sealed class GitHubTreeItem
@@ -325,6 +407,6 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
     private sealed class GitHubContentResponse
     {
         [JsonPropertyName("content")]
-        public string Content { get; set; } = string.Empty;
+        public string? Content { get; set; }
     }
 }

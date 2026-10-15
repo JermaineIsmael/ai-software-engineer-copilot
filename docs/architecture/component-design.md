@@ -221,6 +221,13 @@ public interface ICopilotTool
    - Validates file paths (security)
    - Returns file metadata and content
 
+3. **WorkspaceCreateTool**, **ModifyCodeTool**, **DiffWorkspaceTool**, and
+   **WorkspaceCleanupTool**
+   - Create isolated snapshots of supported GitHub source/text files
+   - Apply validated create, update, and delete operations only in a workspace
+   - Return unified diffs against the immutable imported baseline
+   - Remove a workspace and its baseline when requested
+
 **CopilotToolRegistry:**
 - Returns all available tools
 - Tools are registered in Program.cs
@@ -230,7 +237,40 @@ public interface ICopilotTool
 
 **Tests:** `tests/Copilot.Api.Tests/Tools/CodeSearchToolTests.cs`, etc.
 
-### 8. Architecture Analysis Service
+### 8. Workspace and Patch Services
+
+**Files:** `src/backend/Copilot.Api/Services/Workspace/`
+
+**Responsibilities:**
+- `WorkspaceManager` imports a GitHub snapshot pinned to a commit SHA and stores workspace metadata
+- An immutable baseline is kept separately from the editable working directory
+- `PatchApplicationService` validates file operations and path boundaries, checks optional SHA-256 preconditions, and rolls back applied operations after a failed patch
+- `DiffService` compares the working copy with the exact baseline and returns text diffs for added, modified, and deleted files
+- `WorkspaceOperationLock` serializes modifications, diff reads, and cleanup for a workspace
+
+**Safety boundaries:**
+- File paths must be relative repository paths using `/` separators
+- Traversal paths, metadata paths, symbolic links, and reparse points are rejected
+- Snapshot and patch file-count/byte limits are configurable through `WorkspaceOptions`
+- Workspaces are temporary local copies; these services do not write to the user's checkout or push to GitHub
+- The workspace is not an OS sandbox, and no commands or generated code are executed
+
+**Configuration:** `Workspace:RootDirectory`, `MaximumSnapshotFiles`,
+`MaximumSnapshotBytes`, `MaximumPatchFiles`, and `MaximumPatchBytes`.
+
+**Tests:** `tests/Copilot.Api.Tests/Workspace/WorkspaceWorkflowTests.cs`
+
+**Workflow:**
+
+```mermaid
+flowchart LR
+    A[workspace_create] --> B[Isolated working copy and immutable baseline]
+    B --> C[modify_code validates and applies patch]
+    C --> D[diff_workspace compares working copy to baseline]
+    D --> E[workspace_cleanup removes workspace]
+```
+
+### 9. Architecture Analysis Service
 
 **File:** `src/backend/Copilot.Api/Services/ArchitectureAnalysis/ArchitectureAnalysisService.cs`
 
@@ -256,7 +296,7 @@ public interface ICopilotTool
 
 **Tests:** `tests/Copilot.Api.Tests/ArchitectureAnalysis/ArchitectureAnalysisServiceTests.cs`
 
-### 9. Code Review Service
+### 10. Code Review Service
 
 **File:** `src/backend/Copilot.Api/Services/CodeReview/CodeReviewService.cs`
 
@@ -274,7 +314,7 @@ public interface ICopilotTool
 
 **Lifetime:** Scoped
 
-### 10. Test Generation Service
+### 11. Test Generation Service
 
 **File:** `src/backend/Copilot.Api/Services/TestGeneration/TestGenerationService.cs`
 

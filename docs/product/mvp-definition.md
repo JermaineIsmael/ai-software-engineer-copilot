@@ -38,6 +38,12 @@ The Minimum Viable Product (MVP) is the smallest, most focused set of functional
    - Azure AI Search for indexing and retrieval
    - Configurable via secrets
 
+6. **Safe Code Modification Foundation**
+   - Create a separate local workspace from supported GitHub repository files
+   - Apply validated file patches only within that workspace
+   - Inspect changes against the original snapshot before reporting them
+   - Never write workspace changes back to the user's checkout or GitHub
+
 ### Core Workflows (End-to-End)
 
 1. **Basic Query Workflow**
@@ -53,6 +59,12 @@ The Minimum Viable Product (MVP) is the smallest, most focused set of functional
    - All code chunks are embedded and indexed
    - Indexing completes without errors
    - Subsequent queries return relevant results
+
+3. **Isolated Modification Workflow**
+   - User explicitly requests a code change
+   - Copilot creates a commit-pinned isolated workspace
+   - Copilot modifies files through validated patch operations
+   - Copilot returns the diff for review; the original repository remains untouched
 
 ### Quality Criteria
 
@@ -77,7 +89,7 @@ The following are **NOT** in the MVP scope:
 |---------|--------|-------------|
 | Persistent conversation storage | Added complexity; in-memory sufficient for MVP | Sprint 2 |
 | User authentication/authorization | Single-developer MVP; not needed initially | Sprint 2 |
-| Workspace and patch generation | Complex feature; requires UI and review workflow | Sprint 3+ |
+| Applying workspace changes to the user's checkout or publishing to GitHub | Requires explicit approval and a separate integration workflow | Future sprint; not implemented |
 | Azure DevOps integration | GitHub sufficient for MVP; Azure DevOps later | Sprint 3+ |
 | Advanced observability | Basic logging sufficient; comprehensive monitoring later | Sprint 4+ |
 | Production deployment | MVP runs locally/dev environment | Sprint 3 |
@@ -166,8 +178,11 @@ Before MVP release:
 - User authentication
 - Advanced logging and monitoring
 
-**Sprint 3:**
-- Workspace and patch generation
+**Sprint 4:**
+- Isolated workspace management, validated patch application, and diff inspection
+
+**Future sprints:**
+- User approval and publishing changes to the user's checkout or GitHub
 - Azure DevOps integration
 - Production deployment (infrastructure as code)
 

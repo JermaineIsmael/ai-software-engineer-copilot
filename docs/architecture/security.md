@@ -96,15 +96,25 @@ policy.WithOrigins("https://copilot.example.com")
 
 **Verification:** ChatEndpointFailureTests verify error responses ✓
 
-### 6. File Operations (Future - Workspace)
+### 6. File Operations and Workspace Isolation
 
-**Status:** Not Yet Implemented
+**Status:** Implemented for isolated local workspace snapshots
 
-**Planned Controls:**
-- Path validation to prevent directory traversal
-- Whitelist of allowed directories
-- Read-only operations initially
-- No code execution from untrusted sources
+**Controls:**
+- Workspaces contain imported copies of supported repository text/source files; the source checkout and remote repository are never written
+- Imported snapshots are pinned to a Git commit SHA, and incomplete snapshots are rejected
+- File paths are relative-only, validated against the workspace root, and reject parent traversal, absolute paths, metadata paths, and Windows path ambiguities
+- Existing symbolic links and reparse points are rejected during writes and diff traversal
+- Patch operations validate create/update/delete preconditions and optional expected SHA-256 hashes
+- Multi-file patches validate all operations before writing and roll back completed operations if a write fails
+- Snapshot/patch size and file-count limits are configurable
+- No code or shell commands are executed
+
+**Residual limitations:**
+- Workspaces are stored on local disk and are not automatically expired; use `workspace_cleanup` after reviewing the diff
+- This is application-level path isolation, not an OS/container sandbox against other processes running as the same user
+- The current tools expose workspace changes for review but do not approve, publish, or apply them to the user's checkout
+- Repository file support is limited to the extensions included by `GitHubRepositoryProvider`
 
 ### 7. Cancellation Token Handling
 
@@ -243,16 +253,19 @@ policy.WithOrigins("https://copilot.example.com")
 - Set limits per IP or API key
 - Return HTTP 429 when limit exceeded
 
-### Risk 6: Path Traversal (Future - Workspace)
+### Risk 6: Workspace File Access
 
-**Severity:** High
+**Severity:** Medium
 
-**Description:** When implementing file operations, insufficient path validation could allow access outside intended directories
+**Description:** Workspace manipulation or cleanup could access files outside a workspace if path validation or filesystem boundaries are bypassed.
 
-**Mitigation (Planned):**
-- Validate all file paths against workspace root
-- Use `Path.GetFullPath()` and verify it starts with workspace root
-- Reject paths containing `..`
+**Mitigation (Implemented):**
+- Resolve and validate each relative path against the working directory
+- Reject traversal, rooted paths, reserved metadata names, symbolic links, and reparse points
+- Use generated workspace IDs under the configured workspace root for cleanup
+- Test traversal rejection and workspace isolation
+
+**Residual risk:** Filesystem time-of-check/time-of-use races against an external process with access to the same user account are not eliminated; run the service with least privilege and use an OS sandbox for stronger isolation.
 
 ### Risk 7: Dependency Vulnerabilities
 

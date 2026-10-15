@@ -11,6 +11,8 @@ using Copilot.Api.Services.Copilot;
 using Copilot.Api.Services.ArchitectureAnalysis;
 using Copilot.Api.Services.FileInspection;
 using Copilot.Api.Services.CodeReview;
+using Copilot.Api.Configuration;
+using Copilot.Api.Services.Workspace;
 
 
 
@@ -30,6 +32,11 @@ builder.Services
     .AddOptions<Copilot.Api.Configuration.RetrievalContextOptions>()
     .Bind(builder.Configuration.GetSection(
         Copilot.Api.Configuration.RetrievalContextOptions.SectionName));
+
+builder.Services
+    .AddOptions<WorkspaceOptions>()
+    .Bind(builder.Configuration.GetSection(
+        WorkspaceOptions.SectionName));
 
 
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
@@ -65,12 +72,32 @@ builder.Services.AddScoped<IFileInspectionService, FileInspectionService>();
 
 builder.Services.AddScoped<CodeSearchTool>();
 builder.Services.AddScoped<FileInspectionTool>();
+builder.Services.AddSingleton<WorkspaceOperationLock>();
+builder.Services.AddScoped<IWorkspaceManager, WorkspaceManager>();
+builder.Services.AddScoped<IPatchApplicationService, PatchApplicationService>();
+builder.Services.AddScoped<IDiffService, DiffService>();
+builder.Services.AddScoped<WorkspaceCreateTool>();
+builder.Services.AddScoped<ModifyCodeTool>();
+builder.Services.AddScoped<DiffWorkspaceTool>();
+builder.Services.AddScoped<WorkspaceCleanupTool>();
 
 builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
     serviceProvider.GetRequiredService<CodeSearchTool>());
 
 builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
     serviceProvider.GetRequiredService<FileInspectionTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<WorkspaceCreateTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<ModifyCodeTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<DiffWorkspaceTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<WorkspaceCleanupTool>());
 
 builder.Services.AddScoped<ICopilotToolRegistry, CopilotToolRegistry>();
 

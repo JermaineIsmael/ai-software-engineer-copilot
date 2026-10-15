@@ -37,6 +37,10 @@ This document tracks the implementation status of all major features as of the d
 | Tool Framework | CopilotToolRegistry | **Implemented** | `Services/Tools/` | Extensible tool interface (ICopilotTool) |
 | Tool: CodeSearch | CodeSearchTool | **Implemented** | `Services/Tools/CodeSearchTool.cs` | Searches code chunks |
 | Tool: FileInspection | FileInspectionTool | **Implemented** | `Services/Tools/FileInspectionTool.cs` | Inspects file contents |
+| Workspace lifecycle | WorkspaceManager | **Implemented** | `Services/Workspace/WorkspaceManager.cs` | Imports commit-pinned source snapshots, persists metadata, serializes operations, and cleans up isolated workspaces |
+| Patch application | PatchApplicationService | **Implemented** | `Services/Workspace/PatchApplicationService.cs` | Validates paths and preconditions; rolls back failed multi-file operations |
+| Workspace diff | DiffService | **Implemented** | `Services/Workspace/DiffService.cs` | Diffs working files against immutable snapshot baseline |
+| Workspace modification tools | WorkspaceCreateTool, ModifyCodeTool, DiffWorkspaceTool, WorkspaceCleanupTool | **Implemented** | `Services/Tools/` | Registered in the Copilot tool registry; changes remain isolated |
 | Tool-Based Generation | IToolCallingCodeAnswerGenerationService | **Implemented** | `Services/Copilot/AzureOpenAIToolCallingCodeAnswerGenerationService.cs` | Function calling integration |
 | Architecture Analysis | ArchitectureAnalysisService | **Implemented** | `Services/ArchitectureAnalysis/ArchitectureAnalysisService.cs` | Analyzes repo architecture |
 | Code Review | CodeReviewService | **Implemented** | `Services/CodeReview/CodeReviewService.cs` | Reviews code snippets |
@@ -88,17 +92,21 @@ This document tracks the implementation status of all major features as of the d
 
 ### 1. Workspace and Patch Management
 
-**Status:** Partially Implemented (structure only)
+**Status:** Implemented for isolated local workspace snapshots
 
-**Gap:** Workspace models and concepts exist in service organization, but end-to-end workflow not verified:
-- Workspace creation ✓ (models exist)
-- Patch generation ✗ (not verified)
-- Patch validation ✗ (not verified)
-- Safe file operations ✗ (not implemented)
+**Implemented:**
+- Workspace creation from a commit-pinned GitHub snapshot with separate working and baseline directories
+- Workspace metadata and lifecycle tracking with cleanup
+- Create/update/delete patch operations with traversal protection, stale-content checks, and rollback
+- Copilot tools for creating, modifying, diffing, and cleaning up a workspace
+- Automated tests for workspace lifecycle, validation, isolation, rollback, diff results, tool workflow, and tool registration
 
-**Risk:** Low - Feature is planned, not promised
+**Remaining limitations:**
+- The workspace is a local copy, not a Git worktree; no branch/commit/push operations are performed
+- No OS sandbox, approval UI, or publish-to-repository operation exists
+- Workspaces are not automatically expired
 
-**Recommendation:** Defer to Sprint 3 per roadmap
+**Status note:** Sprint 4 verification covers the isolated workflow only; it does not imply `v0.4.0` has been committed or released.
 
 ### 2. Conversation Persistence
 

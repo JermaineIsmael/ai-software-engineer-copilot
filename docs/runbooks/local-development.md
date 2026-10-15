@@ -108,6 +108,38 @@ dotnet user-secrets list
 - Never commit secrets to Git
 - Each developer maintains their own local secrets
 
+### Workspace Storage
+
+The workspace tools create isolated copies of supported GitHub source/text files
+under the operating system temporary directory by default:
+
+`<temporary-directory>/ai-software-engineer-copilot/workspaces`
+
+To override the location or its limits, add a `Workspace` section to local
+configuration (for example, User Secrets):
+
+```json
+{
+  "Workspace": {
+    "RootDirectory": "<private-local-workspace-directory>",
+    "MaximumSnapshotFiles": 100000,
+    "MaximumSnapshotBytes": 268435456,
+    "MaximumPatchFiles": 100,
+    "MaximumPatchBytes": 52428800
+  }
+}
+```
+
+The path must be writable by the API process and private to the user running the
+service. Workspaces persist until the `workspace_cleanup` tool is used; clean
+them up after reviewing the diff. These directories are not an OS sandbox, and
+the workspace workflow does not execute code.
+
+The workflow is `workspace_create` → `modify_code` → `diff_workspace` →
+`workspace_cleanup`. Modifications apply immediately inside the isolated
+workspace; there is no separate approval UI, and neither the original checkout
+nor the GitHub repository is changed.
+
 ### 5. Run Unit Tests
 
 ```bash

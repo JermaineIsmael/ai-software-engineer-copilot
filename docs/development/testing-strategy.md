@@ -239,7 +239,20 @@ public async Task CopilotEndpoint_WithValidRequest_ReturnsOk()
 - Tool result processing
 - Tool discovery via registry
 
-### 6. API Endpoint Tests
+### 6. Workspace Workflow Tests
+
+**Files:** `Workspace/WorkspaceWorkflowTests.cs`, `Repository/GitHubRepositoryProviderTests.cs`
+
+**Coverage:**
+- Workspace creation imports repository files and records the resolved commit
+- Incomplete or unsafe snapshots fail without leaving a partial workspace
+- Create/update/delete patch behavior and stale-hash validation
+- Path traversal rejection, workspace isolation, and patch rollback
+- Diffs report added, changed, and deleted files while omitting unchanged files
+- Create/modify/diff/cleanup tool flow and DI tool registration
+- GitHub repository metadata and commit-pinned content retrieval
+
+### 7. API Endpoint Tests
 
 **Files:** `ChatEndpointTests.cs`, `ChatEndpointFailureTests.cs`, and others
 

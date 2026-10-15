@@ -147,6 +147,13 @@ Business logic organized by feature area:
 - **ICopilotTool:** Interface for extensible tools
 - **CodeSearchTool:** Code search tool
 - **FileInspectionTool:** File inspection tool
+- **WorkspaceCreateTool / ModifyCodeTool / DiffWorkspaceTool / WorkspaceCleanupTool:** Isolated repository snapshot modification workflow
+
+#### Workspace Services (`Services/Workspace/`)
+- **WorkspaceManager:** Creates, persists, leases, and cleans up isolated repository snapshots
+- **PatchApplicationService:** Validates and applies bounded file operations with rollback
+- **DiffService:** Reports changes against an immutable baseline
+- **WorkspaceOperationLock:** Serializes operations per workspace
 
 #### Additional Services
 - **ArchitectureAnalysisService:** Architecture analysis
@@ -338,11 +345,10 @@ CodeCopilotService detects tool-calling service
 - GitHub Actions CI/CD
 
 ### Partially Implemented
-- Workspace management (structure exists, full workflow not verified)
+- User approval and publishing workspace changes back to a repository (not implemented)
 
 ### Planned / Not Yet Implemented
 - Persistent conversation storage (Cosmos DB)
-- Workspace patch generation and validation
 - Azure DevOps integration
 - Advanced observability and diagnostics
 - Production deployment (infrastructure as code)
@@ -350,7 +356,7 @@ CodeCopilotService detects tool-calling service
 ## Known Architectural Gaps
 
 1. **Conversation Persistence:** Currently in-memory; Cosmos DB integration planned but not implemented
-2. **Workspace Isolation:** Proposed but not fully implemented in code
+2. **Workspace Isolation:** Application-level isolation is implemented for workspace file operations; OS-level sandboxing, approval, and publishing are not
 3. **Rate Limiting:** No per-user/per-API-key rate limiting implemented
 4. **Caching:** Limited caching strategy; improvement opportunity
 5. **Monitoring:** Application Insights configured but custom metrics not comprehensive
