@@ -270,7 +270,32 @@ flowchart LR
     D --> E[workspace_cleanup removes workspace]
 ```
 
-### 9. Architecture Analysis Service
+### 9. Build and Test Execution
+
+**Files:** `src/backend/Copilot.Api/Services/Workspace/`
+
+**Responsibilities:**
+- `BuildTestExecutionService` runs only fixed `dotnet build` and `dotnet test`
+  operations against a workspace-relative solution or project
+- `CommandProcessRunner` starts the executable without a shell, captures bounded
+  output, and attempts process-tree termination after timeout or cancellation
+- `BuildTestExecutionApproval` is request-scoped and permits one approved run
+  per Copilot request; execution tools are withheld without explicit approval
+
+**Boundaries:** Development environment only, trusted repositories only,
+one process at a time, 600-second default timeout, 131,072-character output cap.
+Package restore may access the network. Child processes receive no application
+credentials through inherited environment variables. This does not sandbox
+operating-system file access or enforce CPU, memory, or disk quotas; see
+`docs/architecture/security.md`.
+
+**Configuration:** `BuildTestExecution:Enabled`, `TimeoutSeconds`, and
+`MaximumOutputCharacters`.
+
+**Tests:** `tests/Copilot.Api.Tests/Workspace/WorkspaceWorkflowTests.cs` and
+`tests/Copilot.Api.Tests/Copilot/CodeCopilotToolCallingTests.cs`
+
+### 10. Architecture Analysis Service
 
 **File:** `src/backend/Copilot.Api/Services/ArchitectureAnalysis/ArchitectureAnalysisService.cs`
 
@@ -296,7 +321,7 @@ flowchart LR
 
 **Tests:** `tests/Copilot.Api.Tests/ArchitectureAnalysis/ArchitectureAnalysisServiceTests.cs`
 
-### 10. Code Review Service
+### 11. Code Review Service
 
 **File:** `src/backend/Copilot.Api/Services/CodeReview/CodeReviewService.cs`
 
@@ -314,7 +339,7 @@ flowchart LR
 
 **Lifetime:** Scoped
 
-### 11. Test Generation Service
+### 12. Test Generation Service
 
 **File:** `src/backend/Copilot.Api/Services/TestGeneration/TestGenerationService.cs`
 

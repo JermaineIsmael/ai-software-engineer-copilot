@@ -15,6 +15,11 @@ public sealed class GitHubRepositoryProvider : IRepositoryProvider
         {
             ".cs",
             ".csproj",
+            ".sln",
+            ".props",
+            ".targets",
+            ".config",
+            ".resx",
             ".json",
             ".yml",
             ".yaml",

@@ -140,6 +140,50 @@ The workflow is `workspace_create` → `modify_code` → `diff_workspace` →
 workspace; there is no separate approval UI, and neither the original checkout
 nor the GitHub repository is changed.
 
+### Build and Test Execution
+
+Build/test tools are available only in the API's `Development` environment and
+only for trusted repository workspaces. To approve one run, send the Copilot
+request to `/api/copilot/ask` with `"approveBuildTestExecution": true`. For
+example:
+
+```json
+{
+  "query": "Run dotnet build on Copilot.sln in the workspace",
+  "repository": "https://github.com/<owner>/<repository>",
+  "branch": "main",
+  "top": 5,
+  "approveBuildTestExecution": true
+}
+```
+
+The current React chat UI does not expose this approval control; use an API
+client to submit the approved request. That request authorizes one `dotnet build`
+or `dotnet test` operation. Approve a separate Copilot request for the other
+operation. The default timeout is 600 seconds and the combined output limit is
+131,072 characters. Package restore may use outbound network access.
+
+Configuration may disable execution or lower the defaults:
+
+```json
+{
+  "BuildTestExecution": {
+    "Enabled": true,
+    "TimeoutSeconds": 600,
+    "MaximumOutputCharacters": 131072
+  }
+}
+```
+
+The child process does not inherit application credential environment values,
+but it runs with the API user's OS permissions. This is not a sandbox and does
+not prevent access to files available to that user or impose OS-level CPU,
+memory, or disk quotas. Trusted code may read same-user files and print their
+contents; do not run if accessible secrets must be protected, and inspect output
+before sharing. Use only with repositories you trust; never enable this
+capability for untrusted repositories or production workloads. Set
+`BuildTestExecution:Enabled` to `false` to disable it in Development.
+
 ### 5. Run Unit Tests
 
 ```bash

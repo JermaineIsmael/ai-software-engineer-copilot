@@ -41,6 +41,7 @@ This document tracks the implementation status of all major features as of the d
 | Patch application | PatchApplicationService | **Implemented** | `Services/Workspace/PatchApplicationService.cs` | Validates paths and preconditions; rolls back failed multi-file operations |
 | Workspace diff | DiffService | **Implemented** | `Services/Workspace/DiffService.cs` | Diffs working files against immutable snapshot baseline |
 | Workspace modification tools | WorkspaceCreateTool, ModifyCodeTool, DiffWorkspaceTool, WorkspaceCleanupTool | **Implemented** | `Services/Tools/` | Registered in the Copilot tool registry; changes remain isolated |
+| Build/test execution | BuildTestExecutionService | **In Progress** | `Services/Workspace/BuildTestExecutionService.cs` | Local Development only; trusted repos; one explicit approved .NET run per Copilot request; Release build succeeded; Release suite: 219 passed; formal security review pending; not OS-sandboxed |
 | Tool-Based Generation | IToolCallingCodeAnswerGenerationService | **Implemented** | `Services/Copilot/AzureOpenAIToolCallingCodeAnswerGenerationService.cs` | Function calling integration |
 | Architecture Analysis | ArchitectureAnalysisService | **Implemented** | `Services/ArchitectureAnalysis/ArchitectureAnalysisService.cs` | Analyzes repo architecture |
 | Code Review | CodeReviewService | **Implemented** | `Services/CodeReview/CodeReviewService.cs` | Reviews code snippets |
@@ -105,6 +106,7 @@ This document tracks the implementation status of all major features as of the d
 - The workspace is a local copy, not a Git worktree; no branch/commit/push operations are performed
 - No OS sandbox, approval UI, or publish-to-repository operation exists
 - Workspaces are not automatically expired
+- Build/test execution is Development-only and trusted-repository-only, with a per-request approval flag; same-user OS file access and CPU/memory/disk usage remain unrestricted
 
 **Status note:** Sprint 4 verification covers the isolated workflow only; it does not imply `v0.4.0` has been committed or released.
 

@@ -252,7 +252,33 @@ public async Task CopilotEndpoint_WithValidRequest_ReturnsOk()
 - Create/modify/diff/cleanup tool flow and DI tool registration
 - GitHub repository metadata and commit-pinned content retrieval
 
-### 7. API Endpoint Tests
+### 7. Build/Test Execution Tests
+
+**Files:** `Workspace/WorkspaceWorkflowTests.cs`,
+`Copilot/CodeCopilotToolCallingTests.cs`, and
+`Repository/GitHubRepositoryProviderTests.cs`
+
+**Required coverage:**
+- Execution tools are unavailable unless that Copilot request includes explicit approval
+- At most one approved command executes per request
+- Only fixed `dotnet build` and `dotnet test` commands are launched with argument-list parameters
+- Workspace-relative `.sln`/`.csproj` targets are required; traversal and unsupported targets are rejected
+- Non-Development execution is refused
+- Output and elapsed time are bounded; timeout, cancellation, process-tree termination, non-zero exit, and startup errors are handled explicitly
+- Child process environment excludes inherited application credentials
+
+The real workspace-bound build test compiles a temporary .NET project and
+confirms the source checkout remains untouched.
+
+**Sprint 5 process-runner integration coverage:** Spawned long-running child
+processes verify that both timeout and request cancellation terminate the process
+tree. A formal build/test execution security review is still pending.
+
+This local trusted-code model cannot test or guarantee OS-level sandboxing. CPU,
+memory, disk, and same-user file access remain outside the application's
+enforcement boundary and must remain documented as residual risk.
+
+### 8. API Endpoint Tests
 
 **Files:** `ChatEndpointTests.cs`, `ChatEndpointFailureTests.cs`, and others
 

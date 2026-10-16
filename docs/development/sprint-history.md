@@ -122,6 +122,26 @@ All files use actual code references and verified implementation status.
 
 ---
 
+## Sprint 4: Workspace and Safe Code Modification
+
+**Status:** Implementation merged, tagged as `v0.4.0`, and release authorized by the user in conversation on 2026-10-16
+**Implementation commit:** `1f4904fb7350b2d399f029b95c1b1a6a89e61efb`
+**Tag:** `v0.4.0`
+
+The user-provided GitHub screenshot shows commit `1f4904f` on `main` with the
+`v0.4.0` tag. The short hash matches the full implementation commit recorded
+above. The local `origin` remote points to the fork, so its tag listing does not
+reflect tags created on the original repository.
+
+**Verification recorded for this implementation:**
+- Debug solution build succeeded
+- Full test suite: 206 passed, 0 failed, 0 skipped
+- `git diff --check` passed
+
+**Outstanding:** A formal security audit was not performed.
+
+---
+
 ## Sprint 4+: Integrations and IDE Support (Planned)
 
 **Goal:** Expand repository support and IDE integration

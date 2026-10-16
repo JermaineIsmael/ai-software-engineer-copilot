@@ -3,6 +3,7 @@ using Copilot.Api.Models.Retrieval;
 using Copilot.Api.Services.Copilot;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Tools;
+using Copilot.Api.Services.Workspace;
 
 namespace Copilot.Api.Tests.Copilot;
 
@@ -98,6 +99,46 @@ public sealed class CodeCopilotToolCallingTests
         Assert.Equal(1, toolCallingService.CallCount);
     }
 
+    [Fact]
+    public async Task AskAsync_ExposesExecutionToolsOnlyWhenRequestIsApproved()
+    {
+        var executionTool = new FakeApprovalRequiredTool();
+        var toolCallingService = new FakeToolCallingAnswerGenerationService(
+            "Execution-aware answer");
+        var approval = new FakeBuildTestExecutionApproval();
+        var service = new CodeCopilotService(
+            new FakeRetrievalService(),
+            new FakeContextBuilder(),
+            new FakeAnswerGenerationService("Legacy answer"),
+            toolCallingService,
+            new FakeToolRegistry(
+                new FakeTool("code_search"),
+                executionTool),
+            approval);
+
+        await service.AskAsync(
+            new CopilotRequest(
+                "Run the build.",
+                "https://github.com/example/repo",
+                ApproveBuildTestExecution: false));
+
+        Assert.DoesNotContain(
+            toolCallingService.Tools,
+            tool => tool.Name == "run_workspace_build");
+        Assert.False(approval.Approved);
+
+        await service.AskAsync(
+            new CopilotRequest(
+                "Run the build.",
+                "https://github.com/example/repo",
+                ApproveBuildTestExecution: true));
+
+        Assert.Contains(
+            toolCallingService.Tools,
+            tool => tool.Name == "run_workspace_build");
+        Assert.True(approval.Approved);
+    }
+
     private static CodeCopilotService CreateService(
         IToolCallingCodeAnswerGenerationService toolCallingService,
         ICopilotToolRegistry registry,
@@ -191,6 +232,45 @@ public sealed class CodeCopilotToolCallingTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult("{}");
+        }
+    }
+
+    private sealed class FakeApprovalRequiredTool : ICopilotTool,
+        IApprovalRequiredCopilotTool
+    {
+        public string Name => "run_workspace_build";
+
+        public string Description => "Build.";
+
+        public string ParametersJsonSchema => "{}";
+
+        public Task<string> ExecuteAsync(
+            string argumentsJson,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult("{}");
+        }
+    }
+
+    private sealed class FakeBuildTestExecutionApproval
+        : IBuildTestExecutionApproval
+    {
+        public bool Approved { get; private set; }
+
+        public void SetApproved(bool approved)
+        {
+            Approved = approved;
+        }
+
+        public bool TryConsume()
+        {
+            if (!Approved)
+            {
+                return false;
+            }
+
+            Approved = false;
+            return true;
         }
     }
 

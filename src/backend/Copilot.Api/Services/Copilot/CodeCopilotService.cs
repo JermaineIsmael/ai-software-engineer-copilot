@@ -2,6 +2,7 @@ using Copilot.Api.Models.Copilot;
 using Copilot.Api.Models.Retrieval;
 using Copilot.Api.Services.Retrieval;
 using Copilot.Api.Services.Tools;
+using Copilot.Api.Services.Workspace;
 
 namespace Copilot.Api.Services.Copilot;
 
@@ -12,13 +13,15 @@ public sealed class CodeCopilotService : ICodeCopilotService
     private readonly ICodeAnswerGenerationService _answerGenerationService;
     private readonly IToolCallingCodeAnswerGenerationService? _toolCallingAnswerGenerationService;
     private readonly ICopilotToolRegistry? _toolRegistry;
+    private readonly IBuildTestExecutionApproval? _buildTestExecutionApproval;
 
     public CodeCopilotService(
         ICodeRetrievalService retrievalService,
         ICodeContextBuilder contextBuilder,
         ICodeAnswerGenerationService answerGenerationService,
         IToolCallingCodeAnswerGenerationService? toolCallingAnswerGenerationService = null,
-        ICopilotToolRegistry? toolRegistry = null)
+        ICopilotToolRegistry? toolRegistry = null,
+        IBuildTestExecutionApproval? buildTestExecutionApproval = null)
     {
         ArgumentNullException.ThrowIfNull(retrievalService);
         ArgumentNullException.ThrowIfNull(contextBuilder);
@@ -29,6 +32,7 @@ public sealed class CodeCopilotService : ICodeCopilotService
         _answerGenerationService = answerGenerationService;
         _toolCallingAnswerGenerationService = toolCallingAnswerGenerationService;
         _toolRegistry = toolRegistry;
+        _buildTestExecutionApproval = buildTestExecutionApproval;
     }
 
     public async Task<CopilotResponse> AskAsync(
@@ -70,7 +74,13 @@ public sealed class CodeCopilotService : ICodeCopilotService
         if (_toolCallingAnswerGenerationService is not null &&
             _toolRegistry is not null)
         {
-            var tools = _toolRegistry.GetTools();
+            _buildTestExecutionApproval?.SetApproved(
+                request.ApproveBuildTestExecution);
+            var tools = _toolRegistry.GetTools()
+                .Where(tool =>
+                    request.ApproveBuildTestExecution ||
+                    tool is not IApprovalRequiredCopilotTool)
+                .ToArray();
 
             var toolAnswer =
                 await _toolCallingAnswerGenerationService.GenerateAsync(

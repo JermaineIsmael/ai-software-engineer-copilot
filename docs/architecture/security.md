@@ -108,7 +108,8 @@ policy.WithOrigins("https://copilot.example.com")
 - Patch operations validate create/update/delete preconditions and optional expected SHA-256 hashes
 - Multi-file patches validate all operations before writing and roll back completed operations if a write fails
 - Snapshot/patch size and file-count limits are configurable
-- No code or shell commands are executed
+- Workspace and patch operations do not execute code; approved build/test
+  execution is described separately in section 7
 
 **Residual limitations:**
 - Workspaces are stored on local disk and are not automatically expired; use `workspace_cleanup` after reviewing the diff
@@ -116,7 +117,50 @@ policy.WithOrigins("https://copilot.example.com")
 - The current tools expose workspace changes for review but do not approve, publish, or apply them to the user's checkout
 - Repository file support is limited to the extensions included by `GitHubRepositoryProvider`
 
-### 7. Cancellation Token Handling
+### 7. Build and Test Command Execution
+
+**Status:** Implemented for trusted repositories in local Development mode
+
+**Approval and scope:**
+- Execution tools are exposed to the Copilot only when the caller sets
+  `ApproveBuildTestExecution` on that individual `/api/copilot/ask` request
+- The approval authorizes at most one build or test command per Copilot request
+- Only `dotnet build` and `dotnet test` are supported, targeting a workspace
+  relative `.sln` or `.csproj` file
+- Execution is disabled outside the ASP.NET Core Development environment and
+  can also be disabled through `BuildTestExecution:Enabled`
+
+**Implemented controls:**
+- Arguments are passed through `ProcessStartInfo.ArgumentList`; no shell is
+  invoked and callers cannot select an arbitrary executable
+- The target is resolved beneath the leased workspace and symbolic links and
+  reparse points are rejected by the existing workspace path resolver
+- One process runs at a time; the default timeout is 600 seconds and captured
+  stdout/stderr is bounded to 131,072 characters
+- Timeout and request cancellation trigger process-tree termination
+- The child receives a reduced environment with isolated user/NuGet profile
+  directories; application credentials and inherited credential environment
+  variables are not passed through
+- Outbound network access is allowed for approved runs to restore dependencies
+
+**Accepted limitations and residual risks:**
+- This is **not an OS/container sandbox**. Trusted build/test code runs with the
+  API process user's operating-system permissions and can access that user's
+  files or network resources. Removing credentials from the child environment
+  does not prevent code from reading files accessible to the same OS user.
+- CPU, memory, and disk usage are not constrained by OS quotas. The timeout,
+  serialized execution, and output cap do not prevent resource exhaustion
+  within those limits.
+- Trusted code can still read files accessible to the API's OS user and can emit
+  their contents into captured output. Do not run when that user's accessible
+  files contain secrets that must remain isolated, and review command output
+  before treating it as safe to share.
+- Only explicitly trusted repositories should be run. Do not expose this
+  Development-mode capability to untrusted users or production workloads.
+- A formal build/test execution security review is still required before any
+  broader deployment or trust model.
+
+### 8. Cancellation Token Handling
 
 **Status:** Implemented
 

@@ -38,6 +38,11 @@ builder.Services
     .Bind(builder.Configuration.GetSection(
         WorkspaceOptions.SectionName));
 
+builder.Services
+    .AddOptions<BuildTestExecutionOptions>()
+    .Bind(builder.Configuration.GetSection(
+        BuildTestExecutionOptions.SectionName));
+
 
 builder.Services.AddSingleton<IAzureOpenAIService, AzureOpenAIService>();
 builder.Services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
@@ -80,6 +85,12 @@ builder.Services.AddScoped<WorkspaceCreateTool>();
 builder.Services.AddScoped<ModifyCodeTool>();
 builder.Services.AddScoped<DiffWorkspaceTool>();
 builder.Services.AddScoped<WorkspaceCleanupTool>();
+builder.Services.AddScoped<RunWorkspaceBuildTool>();
+builder.Services.AddScoped<RunWorkspaceTestsTool>();
+builder.Services.AddScoped<IBuildTestExecutionApproval, BuildTestExecutionApproval>();
+builder.Services.AddSingleton<BuildTestExecutionLock>();
+builder.Services.AddSingleton<ICommandProcessRunner, CommandProcessRunner>();
+builder.Services.AddScoped<IBuildTestExecutionService, BuildTestExecutionService>();
 
 builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
     serviceProvider.GetRequiredService<CodeSearchTool>());
@@ -98,6 +109,12 @@ builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
 
 builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
     serviceProvider.GetRequiredService<WorkspaceCleanupTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<RunWorkspaceBuildTool>());
+
+builder.Services.AddScoped<ICopilotTool>(serviceProvider =>
+    serviceProvider.GetRequiredService<RunWorkspaceTestsTool>());
 
 builder.Services.AddScoped<ICopilotToolRegistry, CopilotToolRegistry>();
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +13,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using WorkspaceModel = Copilot.Api.Models.Workspace.Workspace;
 
@@ -415,6 +418,343 @@ public sealed class WorkspaceWorkflowTests
         Assert.Contains(
             registry.GetTools(),
             tool => tool.Name == "workspace_cleanup");
+        Assert.Contains(
+            registry.GetTools(),
+            tool => tool.Name == "run_workspace_build");
+        Assert.Contains(
+            registry.GetTools(),
+            tool => tool.Name == "run_workspace_tests");
+    }
+
+    [Fact]
+    public async Task RunAsync_RequiresApprovalAndConsumesItAfterOneRun()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        var targetPath = Path.Combine(
+            workspace.WorkingDirectory,
+            "sample.csproj");
+        await File.WriteAllTextAsync(targetPath, "<Project />");
+
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(
+                TimedOut: false,
+                ExitCode: 0,
+                DurationMilliseconds: 42,
+                Output: "build succeeded",
+                OutputTruncated: false));
+        var approval = new BuildTestExecutionApproval();
+        var service = CreateBuildTestExecutionService(
+            environment.Manager,
+            approval,
+            processRunner);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Build,
+                "sample.csproj"));
+        Assert.Null(processRunner.StartInfo);
+
+        approval.SetApproved(true);
+        var result = await service.RunAsync(
+            workspace.Id,
+            BuildTestOperation.Build,
+            "sample.csproj");
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(42, result.DurationMilliseconds);
+        Assert.Equal("dotnet", processRunner.StartInfo!.FileName);
+        Assert.Equal(
+            [
+                "build",
+                targetPath,
+                "--configuration",
+                "Release",
+                "--nologo"
+            ],
+            processRunner.StartInfo.ArgumentList);
+        Assert.False(
+            processRunner.StartInfo.Environment.ContainsKey(
+                "AzureOpenAI__ApiKey"));
+        Assert.False(
+            processRunner.StartInfo.Environment.ContainsKey(
+                "GitHub__Token"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Test,
+                "sample.csproj"));
+    }
+
+    [Fact]
+    public async Task RunAsync_ReturnsFailureForNonZeroExitCode()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        await File.WriteAllTextAsync(
+            Path.Combine(workspace.WorkingDirectory, "sample.csproj"),
+            "<Project />");
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(
+                TimedOut: false,
+                ExitCode: 2,
+                DurationMilliseconds: 27,
+                Output: "build failed",
+                OutputTruncated: false));
+        var approval = new BuildTestExecutionApproval();
+        approval.SetApproved(true);
+        var service = CreateBuildTestExecutionService(
+            environment.Manager,
+            approval,
+            processRunner);
+
+        var result = await service.RunAsync(
+            workspace.Id,
+            BuildTestOperation.Build,
+            "sample.csproj");
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal("build failed", result.Output);
+    }
+
+    [Fact]
+    public async Task RunAsync_BuildsApprovedProjectInsideWorkspace()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        await File.WriteAllTextAsync(
+            Path.Combine(workspace.WorkingDirectory, "sample.csproj"),
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """);
+        await File.WriteAllTextAsync(
+            Path.Combine(workspace.WorkingDirectory, "Sample.cs"),
+            "public sealed class Sample { }");
+
+        var approval = new BuildTestExecutionApproval();
+        approval.SetApproved(true);
+        var service = new BuildTestExecutionService(
+            environment.Manager,
+            approval,
+            new BuildTestExecutionLock(),
+            new CommandProcessRunner(),
+            Options.Create(new BuildTestExecutionOptions()),
+            new TestHostEnvironment("Development"));
+
+        var result = await service.RunAsync(
+            workspace.Id,
+            BuildTestOperation.Build,
+            "sample.csproj");
+
+        Assert.True(result.Succeeded, result.Output);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Build succeeded", result.Output);
+        Assert.True(
+            Directory.Exists(
+                Path.Combine(
+                    Directory.GetParent(workspace.WorkingDirectory)!.FullName,
+                    ".copilot-execution")));
+    }
+
+    [Fact]
+    public async Task RunAsync_RejectsTargetsOutsideWorkspaceAndReturnsTimeoutResult()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        var targetPath = Path.Combine(
+            workspace.WorkingDirectory,
+            "sample.sln");
+        await File.WriteAllTextAsync(targetPath, string.Empty);
+
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(
+                TimedOut: true,
+                ExitCode: null,
+                DurationMilliseconds: 60_000,
+                Output: "timed out",
+                OutputTruncated: true));
+        var approval = new BuildTestExecutionApproval();
+        approval.SetApproved(true);
+        var service = CreateBuildTestExecutionService(
+            environment.Manager,
+            approval,
+            processRunner);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Test,
+                "../outside.sln"));
+        Assert.Null(processRunner.StartInfo);
+
+        var result = await service.RunAsync(
+            workspace.Id,
+            BuildTestOperation.Test,
+            "sample.sln");
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.TimedOut);
+        Assert.Null(result.ExitCode);
+        Assert.True(result.OutputTruncated);
+        Assert.Contains("test", processRunner.StartInfo!.ArgumentList);
+    }
+
+    [Fact]
+    public async Task RunAsync_IsUnavailableOutsideDevelopmentEnvironment()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        var targetPath = Path.Combine(
+            workspace.WorkingDirectory,
+            "sample.csproj");
+        await File.WriteAllTextAsync(targetPath, "<Project />");
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(false, 0, 1, string.Empty, false));
+        var service = new BuildTestExecutionService(
+            environment.Manager,
+            new BuildTestExecutionApproval(),
+            new BuildTestExecutionLock(),
+            processRunner,
+            Options.Create(new BuildTestExecutionOptions()),
+            new TestHostEnvironment("Production"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Build,
+                "sample.csproj"));
+        Assert.Null(processRunner.StartInfo);
+    }
+
+    [Fact]
+    public async Task RunAsync_IsUnavailableWhenDisabledByConfiguration()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        await File.WriteAllTextAsync(
+            Path.Combine(workspace.WorkingDirectory, "sample.csproj"),
+            "<Project />");
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(false, 0, 1, string.Empty, false));
+        var service = new BuildTestExecutionService(
+            environment.Manager,
+            new BuildTestExecutionApproval(),
+            new BuildTestExecutionLock(),
+            processRunner,
+            Options.Create(
+                new BuildTestExecutionOptions { Enabled = false }),
+            new TestHostEnvironment("Development"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Build,
+                "sample.csproj"));
+        Assert.Null(processRunner.StartInfo);
+    }
+
+    [Fact]
+    public async Task CommandProcessRunner_CapturesBoundedOutput()
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("--version");
+
+        var result = await new CommandProcessRunner().RunAsync(
+            startInfo,
+            TimeSpan.FromSeconds(30),
+            maximumOutputCharacters: 1);
+
+        Assert.False(result.TimedOut);
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.OutputTruncated);
+        Assert.Equal(1, result.Output.Length);
+    }
+
+    [Fact]
+    public async Task CommandProcessRunner_WithCancelledToken_DoesNotStartProcess()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "executable-that-must-not-start",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => new CommandProcessRunner().RunAsync(
+                startInfo,
+                TimeSpan.FromSeconds(30),
+                maximumOutputCharacters: 100,
+                cancellationSource.Token));
+    }
+
+    [Fact]
+    public async Task CommandProcessRunner_WhenExecutableCannotStart_ThrowsExplicitError()
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "executable-that-does-not-exist",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new CommandProcessRunner().RunAsync(
+                startInfo,
+                TimeSpan.FromSeconds(30),
+                maximumOutputCharacters: 100));
+
+        Assert.Contains("Could not start", exception.Message);
+    }
+
+    [Fact]
+    public async Task BuildTestExecutionLock_RejectsConcurrentRunWithoutQueueing()
+    {
+        using var executionLock = new BuildTestExecutionLock();
+
+        Assert.True(
+            await executionLock.TryAcquireAsync(CancellationToken.None));
+        Assert.False(
+            await executionLock.TryAcquireAsync(CancellationToken.None));
+
+        executionLock.Release();
+
+        Assert.True(
+            await executionLock.TryAcquireAsync(CancellationToken.None));
+        executionLock.Release();
+    }
+
+    private static BuildTestExecutionService CreateBuildTestExecutionService(
+        IWorkspaceManager workspaceManager,
+        IBuildTestExecutionApproval approval,
+        FakeCommandProcessRunner processRunner)
+    {
+        return new BuildTestExecutionService(
+            workspaceManager,
+            approval,
+            new BuildTestExecutionLock(),
+            processRunner,
+            Options.Create(new BuildTestExecutionOptions()),
+            new TestHostEnvironment("Development"));
     }
 
     private static RepositorySnapshot CreateSnapshot(
@@ -540,6 +880,45 @@ public sealed class WorkspaceWorkflowTests
         {
             throw new NotSupportedException();
         }
+    }
+
+    private sealed class FakeCommandProcessRunner : ICommandProcessRunner
+    {
+        private readonly CommandProcessResult _result;
+
+        public FakeCommandProcessRunner(CommandProcessResult result)
+        {
+            _result = result;
+        }
+
+        public ProcessStartInfo? StartInfo { get; private set; }
+
+        public Task<CommandProcessResult> RunAsync(
+            ProcessStartInfo startInfo,
+            TimeSpan timeout,
+            int maximumOutputCharacters,
+            CancellationToken cancellationToken = default)
+        {
+            StartInfo = startInfo;
+            return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public TestHostEnvironment(string environmentName)
+        {
+            EnvironmentName = environmentName;
+        }
+
+        public string EnvironmentName { get; set; }
+
+        public string ApplicationName { get; set; } = "Copilot.Api.Tests";
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } =
+            new NullFileProvider();
     }
 
     private sealed class WorkspaceApiFactory : WebApplicationFactory<Program>

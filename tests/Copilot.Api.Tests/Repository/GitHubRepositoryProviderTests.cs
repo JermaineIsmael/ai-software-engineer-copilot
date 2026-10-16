@@ -41,6 +41,10 @@ public sealed class GitHubRepositoryProviderTests
                             {
                               "tree": [
                                 {
+                                  "path": "Copilot.sln",
+                                  "type": "blob"
+                                },
+                                {
                                   "path": "src/sample.cs",
                                   "type": "blob"
                                 }
@@ -55,6 +59,14 @@ public sealed class GitHubRepositoryProviderTests
                     {
                         return JsonResponse(
                             """{"content":"c2FtcGxl"}""");
+                    }
+
+                    if (requestUri.PathAndQuery.Contains(
+                            "contents/Copilot.sln?ref=0123456789abcdef0123456789abcdef01234567",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return JsonResponse(
+                            """{"content":"c29sdXRpb24="}""");
                     }
 
                     return new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -75,8 +87,9 @@ public sealed class GitHubRepositoryProviderTests
             "0123456789abcdef0123456789abcdef01234567",
             snapshot.CommitSha);
         Assert.Equal("main", snapshot.DefaultBranch);
-        Assert.Single(snapshot.Files);
-        Assert.Equal("sample", snapshot.Files[0].Content);
+        Assert.Equal(2, snapshot.Files.Count);
+        Assert.Contains(snapshot.Files, file => file.Path == "Copilot.sln");
+        Assert.Contains(snapshot.Files, file => file.Content == "sample");
         Assert.Contains(
             requestedUris,
             uri => uri.Contains("/commits/feature%2Fsafe", StringComparison.OrdinalIgnoreCase));
