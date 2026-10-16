@@ -142,6 +142,30 @@ reflect tags created on the original repository.
 
 ---
 
+## Sprint 5: Build and Test Execution
+
+**Status:** Implementation and scoped security review verified; release tag pending
+**Implementation commit:** `7e7cdf63aa19cd3b1cbe5417ec93d893697335ab`
+
+**Security review (2026-10-16, GitHub Copilot):** Passed for trusted repositories
+in local Development mode. The review covered command allowlisting and argument
+handling, per-request single-use approval, workspace-relative target validation
+(including symlink rejection), child environment reduction, process-tree timeout
+and cancellation, output bounds, and regression coverage. No release-blocking
+findings were identified within the approved scope. This is not an OS sandbox
+review and does not approve untrusted or production execution.
+
+**Verification:**
+- Release API build succeeded with 0 warnings and 0 errors
+- Full Release test suite: 220 passed, 0 failed, 0 skipped
+- `git diff --check` passed before commit
+
+**Residual risks:** Same-user filesystem access, outbound network access, and
+unbounded OS CPU/memory/disk use remain documented in
+`docs/architecture/security.md`.
+
+---
+
 ## Sprint 4+: Integrations and IDE Support (Planned)
 
 **Goal:** Expand repository support and IDE integration

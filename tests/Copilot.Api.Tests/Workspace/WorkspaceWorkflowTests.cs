@@ -607,6 +607,36 @@ public sealed class WorkspaceWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_RejectsSymbolicLinkTargetOutsideWorkspace()
+    {
+        await using var environment = new WorkspaceTestEnvironment();
+        var workspace = await environment.CreateWorkspaceAsync();
+        var outsideTargetPath = Path.Combine(
+            environment.RootDirectory,
+            "outside.csproj");
+        await File.WriteAllTextAsync(outsideTargetPath, "<Project />");
+        File.CreateSymbolicLink(
+            Path.Combine(workspace.WorkingDirectory, "linked.csproj"),
+            outsideTargetPath);
+
+        var processRunner = new FakeCommandProcessRunner(
+            new CommandProcessResult(false, 0, 1, string.Empty, false));
+        var approval = new BuildTestExecutionApproval();
+        approval.SetApproved(true);
+        var service = CreateBuildTestExecutionService(
+            environment.Manager,
+            approval,
+            processRunner);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.RunAsync(
+                workspace.Id,
+                BuildTestOperation.Build,
+                "linked.csproj"));
+        Assert.Null(processRunner.StartInfo);
+    }
+
+    [Fact]
     public async Task RunAsync_IsUnavailableOutsideDevelopmentEnvironment()
     {
         await using var environment = new WorkspaceTestEnvironment();

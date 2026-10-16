@@ -272,7 +272,11 @@ confirms the source checkout remains untouched.
 
 **Sprint 5 process-runner integration coverage:** Spawned long-running child
 processes verify that both timeout and request cancellation terminate the process
-tree. A formal build/test execution security review is still pending.
+tree. Workspace tests also verify that symbolic-link targets are rejected before
+process launch. The scoped build/test execution security review passed on
+2026-10-16 for trusted repositories in local Development mode; it does not imply
+OS-level sandboxing or production approval. Release verification: API build
+succeeded; 220 tests passed, 0 failed, 0 skipped.
 
 This local trusted-code model cannot test or guarantee OS-level sandboxing. CPU,
 memory, disk, and same-user file access remain outside the application's

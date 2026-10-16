@@ -2,8 +2,8 @@
 
 **Project:** AI Software Engineer Copilot (Kage Bunshin)  
 **Purpose:** Authoritative sprint plan, implementation checklist, acceptance criteria, and delivery-status reference  
-**Current sprint:** Sprint 4 — Workspace and Safe Code Modification  
-**Current target release:** `v0.4.0`  
+**Current sprint:** Sprint 6 — Orchestration and MVP
+**Current target release:** `v0.6.0`
 **MVP target:** Sprint 6 — `v0.6.0`  
 **Final planned release:** Sprint 10 — `v1.0.0`
 
@@ -455,7 +455,7 @@ The following sprints are part of the previously recorded ten-sprint engineering
 
 **Release target:** `v0.5.0`  
 **Planned task count:** 6  
-**Status:** `IN PROGRESS`
+**Status:** `VERIFIED`
 
 ### Sprint 5 Entry Readiness Checklist
 
@@ -499,14 +499,16 @@ Enable the copilot to validate code modifications through build and test executi
 - **S5.3** — Implement controlled test execution — `IMPLEMENTED`
 - **S5.4** — Capture structured build and test results — `IMPLEMENTED`
 - **S5.5** — Handle command failures, timeouts, and execution errors — `VERIFIED`
-- **S5.6** — Integrate and verify the build/test workflow — `IN PROGRESS`
+- **S5.6** — Integrate and verify the build/test workflow — `VERIFIED`
 
 **Implementation progress:** S5.1 contract defined; .NET build/test runner
 services, approval gating, structured results, timeout/output limits, and
 tool registration are implemented. The Release API build succeeded and the
 Release test suite passes (219 tests) against the matching Release API assembly.
-Process-tree timeout/cancellation tests pass. Formal security review remains
-outstanding; do not create the release tag until it passes.
+Process-tree timeout/cancellation and symbolic-link rejection tests pass. A
+scoped security review on 2026-10-16 passed for the approved trusted-repository,
+local Development model. No release-blocking findings were identified within
+that scope; OS-level isolation and broader deployment remain out of scope.
 
 ### Key Design Considerations
 
@@ -533,13 +535,13 @@ outstanding; do not create the release tag until it passes.
 ### Release Checklist
 
 - [x] All Sprint 5 acceptance criteria verified
-- [ ] Build/test execution security review passed
+- [x] Build/test execution security review passed for the approved trusted-repository, local Development scope (2026-10-16; residual risks remain documented)
 - [x] Documentation updated
 - [x] Full verification passes (Release API build; 219 passed, 0 failed, 0 skipped)
 - [x] Release authorized (user requested commit, push, and `v0.5.0` on 2026-10-16)
 - [ ] Tag `v0.5.0` created and pushed
 
-**Release status:** `IMPLEMENTATION VERIFIED; SECURITY REVIEW PENDING`
+**Release status:** `IMPLEMENTATION AND SCOPED SECURITY REVIEW VERIFIED; TAG PENDING`
 
 ---
 
