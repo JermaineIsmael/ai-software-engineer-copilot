@@ -455,7 +455,7 @@ The following sprints are part of the previously recorded ten-sprint engineering
 
 **Release target:** `v0.5.0`  
 **Planned task count:** 6  
-**Status:** `VERIFIED`
+**Status:** `RELEASED`
 
 ### Sprint 5 Entry Readiness Checklist
 
@@ -504,7 +504,7 @@ Enable the copilot to validate code modifications through build and test executi
 **Implementation progress:** S5.1 contract defined; .NET build/test runner
 services, approval gating, structured results, timeout/output limits, and
 tool registration are implemented. The Release API build succeeded and the
-Release test suite passes (219 tests) against the matching Release API assembly.
+Release test suite passes (220 tests) against the matching Release API assembly.
 Process-tree timeout/cancellation and symbolic-link rejection tests pass. A
 scoped security review on 2026-10-16 passed for the approved trusted-repository,
 local Development model. No release-blocking findings were identified within
@@ -537,11 +537,11 @@ that scope; OS-level isolation and broader deployment remain out of scope.
 - [x] All Sprint 5 acceptance criteria verified
 - [x] Build/test execution security review passed for the approved trusted-repository, local Development scope (2026-10-16; residual risks remain documented)
 - [x] Documentation updated
-- [x] Full verification passes (Release API build; 219 passed, 0 failed, 0 skipped)
+- [x] Full verification passes (Release API build; 220 passed, 0 failed, 0 skipped)
 - [x] Release authorized (user requested commit, push, and `v0.5.0` on 2026-10-16)
-- [ ] Tag `v0.5.0` created and pushed
+- [x] Tag `v0.5.0` created and pushed to `origin` (2026-10-16; target `853304f58db2ab9215b60ab04482839c03c42180`)
 
-**Release status:** `IMPLEMENTATION AND SCOPED SECURITY REVIEW VERIFIED; TAG PENDING`
+**Release status:** `RELEASED` (`v0.5.0`; target `853304f58db2ab9215b60ab04482839c03c42180`)
 
 ---
 
@@ -1016,8 +1016,8 @@ Each release requires:
 | v0.1.0 | [Historical] | RELEASED | Foundation and initial chat workflow |
 | v0.2.0 | [Historical] | RELEASED | Repository intelligence foundation |
 | v0.3.0 | [Historical] | RELEASED | Retrieval and hybrid search |
-| v0.4.0 | Pending | `S4.1 VERIFIED` | Workspace and code modification (current) |
-| v0.5.0 | Planned | NOT STARTED | Build and test integration |
+| v0.4.0 | [Historical] | RELEASED | Workspace and code modification |
+| v0.5.0 | 2026-10-16 | RELEASED | Build/test execution; scoped security review passed; target `853304f58db2ab9215b60ab04482839c03c42180` |
 | v0.6.0 | Planned | NOT STARTED | Orchestration and MVP |
 | v0.7.0 | Planned | NOT STARTED | Autonomous debugging |
 | v0.8.0 | Planned | NOT STARTED | Security, approvals, and sandbox |

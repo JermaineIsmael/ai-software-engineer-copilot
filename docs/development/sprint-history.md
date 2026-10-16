@@ -144,8 +144,10 @@ reflect tags created on the original repository.
 
 ## Sprint 5: Build and Test Execution
 
-**Status:** Implementation and scoped security review verified; release tag pending
+**Status:** Released as `v0.5.0` on 2026-10-16
 **Implementation commit:** `7e7cdf63aa19cd3b1cbe5417ec93d893697335ab`
+**Release commit/tag target:** `853304f58db2ab9215b60ab04482839c03c42180`
+**Tag:** `v0.5.0` (annotated; pushed to `origin`)
 
 **Security review (2026-10-16, GitHub Copilot):** Passed for trusted repositories
 in local Development mode. The review covered command allowlisting and argument
