@@ -522,6 +522,14 @@ The target architecture will evolve toward:
                        └───────────┘      └──────────┘   └───────────┘
 ```
 
+## Azure Development Deployment
+
+The Terraform configuration and Azure DevOps pipeline are in
+[`infra/`](infra/README.md). The pipeline provisions a private Development API
+using a workload-identity-federated service connection and remote Terraform
+state. The frontend is not yet published, and the API must not be exposed
+publicly until application authentication is implemented.
+
 ## License
 
 See the project `LICENSE` file for license information.

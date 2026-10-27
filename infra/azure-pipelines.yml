@@ -1,0 +1,152 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+parameters:
+  - name: deployApi
+    displayName: Deploy API after Key Vault secrets are provisioned
+    type: boolean
+    default: false
+
+variables:
+  - group: copilot-infra-dev
+  - name: azureServiceConnection
+    value: sc-copilot-dev-wif
+  - name: terraformVersion
+    value: 1.9.8
+  - name: terraformDirectory
+    value: infra/terraform
+  - name: terraformStateContainer
+    value: tfstate
+  - name: terraformStateKey
+    value: copilot/dev.tfstate
+
+stages:
+  - stage: Validate
+    displayName: Validate Terraform
+    jobs:
+      - job: TerraformValidate
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: Install Terraform
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - bash: |
+              set -euo pipefail
+              terraform fmt -check -recursive
+              terraform init -backend=false -input=false
+              terraform validate
+            displayName: Format and validate configuration
+            workingDirectory: $(terraformDirectory)
+
+  - stage: DeployDevelopment
+    displayName: Deploy Development infrastructure
+    dependsOn: Validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: ApplyDevelopment
+        displayName: Apply Terraform and publish API image
+        environment: copilot-dev
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: TerraformInstaller@1
+                  displayName: Install Terraform
+                  inputs:
+                    terraformVersion: $(terraformVersion)
+
+                - task: AzureCLI@2
+                  displayName: Provision infrastructure and optionally deploy API
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    addSpnToEnvironment: true
+                    workingDirectory: $(Build.SourcesDirectory)
+                    inlineScript: |
+                      set -euo pipefail
+
+                      cd "${BUILD_SOURCESDIRECTORY}/infra/terraform"
+                      export ARM_USE_OIDC=true
+                      export ARM_CLIENT_ID="${servicePrincipalId}"
+                      export ARM_TENANT_ID="${tenantId}"
+                      export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+                      export ARM_OIDC_TOKEN="${idToken}"
+
+                      terraform init \
+                        -input=false \
+                        -backend-config="resource_group_name=${TF_STATE_RESOURCE_GROUP}" \
+                        -backend-config="storage_account_name=${TF_STATE_STORAGE_ACCOUNT}" \
+                        -backend-config="container_name=${TF_STATE_CONTAINER:-tfstate}" \
+                        -backend-config="key=${TF_STATE_KEY:-copilot/dev.tfstate}" \
+                        -backend-config="use_azuread_auth=true" \
+                        -backend-config="use_oidc=true"
+
+                      common_vars=(
+                        -var-file=environments/dev.tfvars
+                        -var="subscription_id=${ARM_SUBSCRIPTION_ID}"
+                      )
+
+                      if [[ "${DEPLOY_API}" != "true" ]]; then
+                        if terraform state list | grep -Fq 'azurerm_container_app.api[0]'; then
+                          current_image="$(terraform output -raw container_app_image)"
+                          terraform plan \
+                            -input=false \
+                            -out=infra.tfplan \
+                            "${common_vars[@]}" \
+                            -var="deploy_api=true" \
+                            -var="api_image=${current_image}"
+                          terraform apply -input=false infra.tfplan
+                          echo "Infrastructure updated; the existing API deployment was preserved."
+                          exit 0
+                        fi
+
+                        terraform plan \
+                          -input=false \
+                          -out=base.tfplan \
+                          "${common_vars[@]}" \
+                          -var="deploy_api=false"
+                        terraform apply -input=false base.tfplan
+                        echo "Base infrastructure is ready. Seed the two Key Vault secrets, then queue with deployApi=true."
+                        exit 0
+                      fi
+
+                      registry_name="$(terraform output -raw container_registry_name)"
+                      image_tag="${BUILD_SOURCEVERSION}"
+                      az acr login --name "${registry_name}"
+                      image_uri="$(terraform output -raw container_registry_login_server)/copilot-api:${image_tag}"
+                      docker build \
+                        --file "${BUILD_SOURCESDIRECTORY}/Dockerfile" \
+                        --tag "${image_uri}" \
+                        "${BUILD_SOURCESDIRECTORY}"
+                      docker push "${image_uri}"
+
+                      terraform plan \
+                        -input=false \
+                        -out=api.tfplan \
+                        "${common_vars[@]}" \
+                        -var="deploy_api=true" \
+                        -var="api_image=${image_uri}"
+                      terraform apply -input=false api.tfplan
+                  env:
+                    TF_STATE_RESOURCE_GROUP: $(TF_STATE_RESOURCE_GROUP)
+                    TF_STATE_STORAGE_ACCOUNT: $(TF_STATE_STORAGE_ACCOUNT)
+                    TF_STATE_CONTAINER: $(terraformStateContainer)
+                    TF_STATE_KEY: $(terraformStateKey)
+                    DEPLOY_API: ${{ parameters.deployApi }}
