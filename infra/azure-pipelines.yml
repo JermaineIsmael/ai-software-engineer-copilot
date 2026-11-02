@@ -37,10 +37,20 @@ stages:
         steps:
           - checkout: self
 
-          - task: TerraformInstaller@1
-            displayName: Install Terraform
-            inputs:
-              terraformVersion: $(terraformVersion)
+          - bash: |
+              set -euo pipefail
+              version="$(terraformVersion)"
+              archive="terraform_${version}_linux_amd64.zip"
+              install_dir="$(Agent.TempDirectory)/terraform"
+              mkdir -p "${install_dir}"
+              cd "$(Agent.TempDirectory)"
+              curl -fsSLo "${archive}" "https://releases.hashicorp.com/terraform/${version}/${archive}"
+              curl -fsSLo "terraform_${version}_SHA256SUMS" "https://releases.hashicorp.com/terraform/${version}/terraform_${version}_SHA256SUMS"
+              grep "  ${archive}$" "terraform_${version}_SHA256SUMS" | sha256sum --check --status
+              unzip -o "${archive}" -d "${install_dir}"
+              echo "##vso[task.prependpath]${install_dir}"
+              "${install_dir}/terraform" version
+            displayName: Install Terraform $(terraformVersion)
 
           - bash: |
               set -euo pipefail
@@ -66,10 +76,20 @@ stages:
               steps:
                 - checkout: self
 
-                - task: TerraformInstaller@1
-                  displayName: Install Terraform
-                  inputs:
-                    terraformVersion: $(terraformVersion)
+                - bash: |
+                    set -euo pipefail
+                    version="$(terraformVersion)"
+                    archive="terraform_${version}_linux_amd64.zip"
+                    install_dir="$(Agent.TempDirectory)/terraform"
+                    mkdir -p "${install_dir}"
+                    cd "$(Agent.TempDirectory)"
+                    curl -fsSLo "${archive}" "https://releases.hashicorp.com/terraform/${version}/${archive}"
+                    curl -fsSLo "terraform_${version}_SHA256SUMS" "https://releases.hashicorp.com/terraform/${version}/terraform_${version}_SHA256SUMS"
+                    grep "  ${archive}$" "terraform_${version}_SHA256SUMS" | sha256sum --check --status
+                    unzip -o "${archive}" -d "${install_dir}"
+                    echo "##vso[task.prependpath]${install_dir}"
+                    "${install_dir}/terraform" version
+                  displayName: Install Terraform $(terraformVersion)
 
                 - task: AzureCLI@2
                   displayName: Provision infrastructure and optionally deploy API
