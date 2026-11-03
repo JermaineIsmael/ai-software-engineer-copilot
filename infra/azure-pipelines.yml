@@ -64,7 +64,7 @@ stages:
   - stage: DeployDevelopment
     displayName: Deploy Development infrastructure
     dependsOn: Validate
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/')))
     jobs:
       - deployment: ApplyDevelopment
         displayName: Apply Terraform and publish API image
