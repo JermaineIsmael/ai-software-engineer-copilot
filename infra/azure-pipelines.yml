@@ -18,7 +18,7 @@ parameters:
 variables:
   - group: copilot-infra-dev
   - name: azureServiceConnection
-    value: svc-jeismael-upskill
+    value: sc-copilot-dev
   - name: terraformVersion
     value: 1.9.8
   - name: terraformDirectory
