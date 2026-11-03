@@ -1,4 +1,10 @@
+moved {
+  from = azurerm_container_app_environment.main
+  to   = azurerm_container_app_environment.main[0]
+}
+
 resource "azurerm_container_app_environment" "main" {
+  count                          = var.deploy_api ? 1 : 0
   name                           = "${local.base_name}-${local.suffix}-cae"
   location                       = azurerm_resource_group.main.location
   resource_group_name            = azurerm_resource_group.main.name

@@ -101,7 +101,7 @@ variable "api_image" {
 }
 
 variable "deploy_api" {
-  description = "Create the API Container App after the image is built and Key Vault secrets are provisioned."
+  description = "Create the API Container App and its Container Apps environment after the image is built and Key Vault secrets are provisioned."
   type        = bool
   default     = false
 }

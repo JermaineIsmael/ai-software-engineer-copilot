@@ -55,10 +55,11 @@ integrated.
 3. Configure least-privilege rights for the service connection. It needs
    permissions to create/manage the resources and create scoped role
    assignments (`AcrPull` and `Key Vault Secrets User` for the API identity,
-   plus `AcrPush` for the pipeline identity). Use `Contributor` plus
-   `Role Based Access Control Administrator` or an equivalent scoped custom
-   role at the deployment scope. The service connection also needs
-   `Storage Blob Data Contributor` on the separate state account.
+   plus `AcrPush` for the pipeline identity). Because Terraform creates the
+   deployment resource group, grant the service connection `Contributor` and
+   `Role Based Access Control Administrator` (or equivalent custom roles) at
+   the subscription scope for the initial deployment. The service connection
+   also needs `Storage Blob Data Contributor` on the separate state account.
 4. A pipeline variable group named `copilot-infra-dev` containing:
    - `TF_STATE_RESOURCE_GROUP` — existing resource group for Terraform state
    - `TF_STATE_STORAGE_ACCOUNT` — existing Storage Account for Terraform state
@@ -96,12 +97,14 @@ the backend, and runs `terraform validate` for PRs and branch updates. On
 `main`, after the `copilot-dev` environment approval:
 
 1. Queue with `deployApi=false` (default): Terraform plans and applies the base
-   infrastructure. On later runs, it preserves an already deployed API image
-   instead of removing the app.
+   infrastructure without creating the Container Apps environment or API. On
+   later runs, it preserves an already deployed API image instead of removing
+   the app.
 2. An authorized operator stores the OpenAI and Search keys in Key Vault.
 3. Queue a new approved run with `deployApi=true`: the hosted agent builds and
    pushes a commit-specific API image to Azure Container Registry; Terraform
-   plans and applies the API Container App using that immutable commit tag.
+   creates the Container Apps environment and API Container App using that
+   immutable commit tag.
 
 The image is built from the root [Dockerfile](../Dockerfile). The pipeline does
 not publish the static frontend or make the private API public.

@@ -2,7 +2,7 @@ resource "azurerm_container_app" "api" {
   count = var.deploy_api ? 1 : 0
 
   name                         = "${local.base_name}-${local.suffix}-api"
-  container_app_environment_id = azurerm_container_app_environment.main.id
+  container_app_environment_id = azurerm_container_app_environment.main[0].id
   resource_group_name          = azurerm_resource_group.main.name
   revision_mode                = "Single"
   workload_profile_name        = "Consumption"

@@ -44,6 +44,6 @@ output "container_app_image" {
 }
 
 output "container_apps_environment_id" {
-  description = "Internal Container Apps environment ID."
-  value       = azurerm_container_app_environment.main.id
+  description = "Internal Container Apps environment ID when deploy_api is enabled."
+  value       = try(azurerm_container_app_environment.main[0].id, null)
 }
