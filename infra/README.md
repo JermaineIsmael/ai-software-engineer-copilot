@@ -68,6 +68,12 @@ integrated.
    Entra ID. Terraform uses the `azurerm` backend with OIDC and Entra auth.
    The state backend is intentionally a pre-provisioned bootstrap dependency:
    Terraform cannot safely use a remote backend that it has not initialized.
+   AzureRM automatic resource-provider registration is disabled. A subscription
+   administrator must register the providers used by this stack before the first
+   deployment: `Microsoft.App`, `Microsoft.CognitiveServices`,
+   `Microsoft.ContainerRegistry`, `Microsoft.Insights`, `Microsoft.KeyVault`,
+   `Microsoft.ManagedIdentity`, `Microsoft.Network`,
+   `Microsoft.OperationalInsights`, `Microsoft.Search`, and `Microsoft.Web`.
 6. Configure an Azure DevOps Environment named `copilot-dev` with an approval
    check. The deployment stage runs only from `main`.
 7. Before running the pipeline, make the selected subscription available to
